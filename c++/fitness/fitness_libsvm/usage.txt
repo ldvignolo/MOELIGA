@@ -1,0 +1,10 @@
+
+[leandro@rivendel svm]$ ./svmtrn -s 1 iris.arff iris.modelo
+[leandro@rivendel svm]$ ./svmtrn -s 0 iris.arff iris.modelo
+[leandro@rivendel svm]$ ./svmtrn -s 0 -t 1 iris.arff iris.modelo
+[leandro@rivendel svm]$ ./svmtrn -s 0 -t 2 -q iris.arff iris.modelo
+
+[leandro@rivendel svm]$ ./svmprd iris.arff iris.modelo iris.salida
+[leandro@rivendel svm]$ ./svmprd -q iris.arff iris.modelo iris.salida
+
+ 
