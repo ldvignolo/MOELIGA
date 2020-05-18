@@ -1,0 +1,2302 @@
+//----------------------------------------------------------------------------
+//
+//  Algoritmo Genético
+//
+//  Versión Paralela
+//
+//  29/05/07 - ...
+// 
+//  26-02-13 - Adaptacion para el challenge Interspeech ComParE
+//
+// 2016-01-05 - Seleccion de caracteristicas / subpoblaciones
+// 2016-03-31 - Tasa de Mutacion con decaimiento Exponencial
+//            - La tasa de mutacion de subpoblacion se actualiza proporcinalmente segun el largo del cromosoma
+// 
+// TODO:
+//    - tasa de mutacion fuzzy adaptativa
+//
+//  Leandr0
+//
+//----------------------------------------------------------------------------
+
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+#include <cmath>
+#include <float.h>
+#include <vector>
+#include <time.h>
+#include <algorithm>
+#include <math.h> 
+#include <random>
+
+#undef SEEK_SET
+#undef SEEK_END
+#undef SEEK_CUR
+
+#include <mpi.h>
+
+#include "types.h"
+
+#include <stack>
+#include <ctime>
+
+#include "../configs/Toolbox.hpp"   // LECTURA DEL ARCHIVO DE CONFIGURACION
+
+
+
+using namespace std;
+
+const int maxpob = 20000;
+const int maxstring = 300;
+
+
+/*================================
+  FUNCIONES Y DEFINICIONES UTILES
+  ================================*/
+stack<clock_t> tictoc_stack;
+
+void tic() {
+    tictoc_stack.push(clock());
+}
+
+void toc() {
+    cout << "Time elapsed: "
+              << ((double)(clock() - tictoc_stack.top())) / CLOCKS_PER_SEC
+              << endl;
+    tictoc_stack.pop();
+}
+
+
+
+/*==================================
+  DEFINICION DEL ALGORITMO GENETICO
+  ==================================*/
+
+class AG {
+
+private:
+       double pcruza, pmutacion;          // PROBABILIDADES DE CRUZA Y MUTACION
+       double prom, max, min;             // GUARDO ESTADISTICAS SOBRE FITNESS PARA MOSTRAR
+       ofstream results;                  // ARCHIVO DE TEXTO DE RESULTADOS
+       MPI_Comm everyone;                 // VARIABLE DE MPI
+       float activ_rate;                  // TASA DE ACTIVACIONES PARA INICALIZACION
+       fit_vect aptitud_min, aptitud_max; // minimo y maximo historico observado para cada objetivo
+       
+       std::default_random_engine generator;       
+
+public:
+  
+       int nObjctvs;          // CANTIDAD DE OBJETIVOS  (no uso short porque se manda por mpi como int)
+       short maxgen;          // NUMERO MAXIMO DE GENERACIONES
+       short gen;             // GENERACION ACTUAL              
+       short nsubpob;         // CANTIDAD DE SUBPOBLACIONES       
+       short Elite;
+       short dist_opt;        // medida de distancia para fitness sharing: 0-'variable space', 1-'objective space'
+       double alfa;
+       double sigma_share, alfa_share;
+       string string_aux_filename = "";
+       
+       poblacion pobvieja;   // POBLACION EN LA GENERACION ACTUAL
+       poblacion pobnueva;   // POBLACION DE LA SIGUIENTE GENERACION
+      
+       string fecha;        // FECHA ACTUAL
+       string slvbin;       // Nombre del ejecutvable fitness
+       string res_file;     // nombre de archivo TXT de resultados
+       string crom_file;    // nombre de archivo TXT de los mejores cromosomas (frente Pareto)
+       
+       
+       /*-----------------
+             METODOS 
+         -----------------*/
+       
+       // INICIALIZAR CROMOSOMA
+       cromosoma initcrom(int in_lcrom, float activ_rate);
+       
+       
+       // INICIALIZAR POBLACION
+       void inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruza, double in_pmutacion, int nproc, float tasa_activ, string SETTINGS);
+       
+       
+       // DETERMINAR EL NUMERO DE INDIVIDUOS QUE SERAN SELECCIONADOS COMO PADRES???
+       int seleccion(int tampob, float sumaptitud, poblacion *pob, int caso);
+       
+       
+       // OPERADOR DE CRUZA
+       void cruza(cromosoma padre1, cromosoma padre2, cromosoma *hijo1, cromosoma *hijo2, int Nlcrom, float pcruza);
+       
+       
+       // OPERADOR DE MUTACION
+       cromosoma mutacion(cromosoma crom, double pmutacion, int caso, int &nmutas);
+       
+       // INVERTIR bit
+       bool flip(float prob);
+       
+       // GENERARAR LA SIGUIENTE POBLACION
+       void generacion(int brecha, int seltype, int mutatype, double pmutacion, int nproc);
+       
+       
+       // GENERARAR LA SIGUIENTE SUBPOBLACION
+       poblacion generSubPob(poblacion &SubPob, int brecha, int seltype, int mutatype, float pmuta, int nproc, float imax, short subgen);
+       
+       
+       // GENERAR y EVOLUCIONAR SUBPOBLACION
+       void EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int nproc, int Nsubpobs, int tamSubPob, int NGenSubPob, string cfg_settings);
+       
+       
+       // EXTRAER RESULTADOS DE LA POBLACION???
+       resultado resultados(poblacion &inPOB);
+
+       // calcular distancia entre individuos
+       double distancia(individuo indiv_x, individuo indiv_y, int in_cromlen, short nObjctvs, short dist_opt);
+       
+
+       // FUNCION DE FITNESS SHARING
+       double sharing_fun(double dist, double sigma, double alfa);
+       
+       void CalcularFitness(poblacion &inPOB);
+      
+       // IMPRIMIR datos de individuo en TXT
+       // void Imprimir(double *fitness, int generac, int indiv, cromosoma genes);
+       void ImprimirCromo(individuo johndoe, int generac, int indiv, bool new_front, int lcrom);
+       
+       // Buscar mejor individuo e IMPRIMIR en TXT
+       void ImprimirFrente(poblacion &inPOB, int generac, double max_fit);
+       
+       // IMPRIMIR datos de generacion en TXT
+       void ImprimirGen(int generac, double maxfitness, double minfitness, double prom, poblacion &pob);
+       
+       // FUNCION AUXILIAR PARA IMPRIMIR ALGUN TIPO DE NOTIFICACION EN EL ARCHIVO DE RESULTADOS
+       void Notificar(string notify);
+       
+       unsigned Verificar(individuo *johndoe);
+       
+       unsigned Verificar(cromosoma *johndoe);
+       
+       // DETENER EL ALGORITMO???
+       void Terminar(int nproc, int lcrom);
+};
+
+
+
+//==================================
+// METODOS DE "MOGA"
+//==================================
+
+
+//===================================================================
+resultado AG::resultados(poblacion &inPOB)
+{
+   int j;
+   float acum;
+
+   resultado result;
+
+   acum = inPOB.individuos[0].Fitness;
+
+   for (j=1;j<inPOB.tampob;j++)
+   {
+         if (inPOB.individuos[j].Fitness > acum)
+         {
+            acum = inPOB.individuos[j].Fitness;
+         }
+   }
+
+   result.maxfitness = acum;
+
+   acum = inPOB.individuos[0].Fitness;
+
+   for (j=1;j<inPOB.tampob;j++)
+   {
+         if (inPOB.individuos[j].Fitness < acum)
+         {
+             acum = inPOB.individuos[j].Fitness;
+         }
+   }
+   result.minfitness = acum;
+
+   acum = inPOB.individuos[0].Fitness;
+
+   for (j=1;j<inPOB.tampob;j++)
+   {
+         acum = acum + inPOB.individuos[j].Fitness;
+   }
+   result.prom = acum/inPOB.tampob;
+
+   return result;
+
+}
+//===================================================================
+
+
+
+
+
+//===================================================================
+cromosoma AG::initcrom(int in_lcrom, float activ_rate)
+{
+    cromosoma adan;
+    vector <int> idx;
+    int nact = 0;
+    
+    adan.resize(in_lcrom);
+    idx.resize(in_lcrom);
+    for (int i=0;i<in_lcrom;i++) {
+      adan[i]=false;
+      idx[i]=i;
+    }  
+    
+    random_shuffle ( idx.begin(), idx.end() );
+
+    // std::lognormal_distribution<double> distribution(activ_rate,0.5);
+    std::normal_distribution<double> distribution(10*activ_rate,2.5);
+    double number = distribution(generator);
+    
+    nact = (int) ((number/10.0)*in_lcrom);
+    
+    if (flip(0.02)) nact = in_lcrom - (int) rand()%in_lcrom*10.0/100.0;
+    else if (flip(0.02)) nact = (int) rand()%in_lcrom*10.0/100.0;
+    
+    if ((nact<0) || (nact>=in_lcrom))
+       nact = (int) (activ_rate*in_lcrom);
+    
+    // nact = (int) (activ_rate*in_lcrom);
+    // cout  << ">> -- >> -- >> -- >> " << activ_rate << " " << in_lcrom   <<  " "  <<   number    <<  " "  << nact << endl;
+    
+    for (int i=0;i<nact;i++) {
+      adan[idx[i]]=true;
+    }
+    
+    // cout  << ">> -- >> -- >> -- >> " << adan[0] << " " << adan[1] << " " << adan[2] << " " << adan[3]<< " " << adan[4]<< " " << adan[5]<< endl;
+    
+    return adan;
+}
+//===================================================================
+
+
+
+//===================================================================
+void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, int nproc)
+{
+
+    int i, k, j, mate1, mate2;
+    unsigned aux;
+    float acum, seed;
+    int punto;
+    double sumaptitud=0;
+
+    pmutacion = in_pmutacion;
+    
+    pobnueva.lcrom = pobvieja.lcrom;
+    pobnueva.tampob = pobvieja.tampob;
+    pobnueva.NMutas = 0;
+    
+    // Elitismo basado en rango / dominacion
+    aux = pobvieja.individuos[0].rango;
+    punto = 0;
+    for (j=1;j<pobvieja.tampob;j++)
+    {
+        if (pobvieja.individuos[j].rango < aux)
+        {
+              aux = pobvieja.individuos[j].rango;
+              punto = j;
+        }
+    }    
+    
+    vector <short> new_Elite;
+    // En este caso se hace un muestreo de los individuos que estan en el frente
+    for (j=0;j<pobvieja.tampob;j++)
+    {      
+        if (pobvieja.individuos[j].rango==pobvieja.individuos[punto].rango) 
+        {
+              new_Elite.push_back(j);
+        }
+    }    
+    
+    short rango = pobvieja.individuos[punto].rango+1;
+    while ((new_Elite.size() < Elite) && (rango<pobvieja.tampob))
+    {       
+        for (j=0;(j<pobvieja.tampob)&&(new_Elite.size()<Elite);j++)
+        {      
+             if (pobvieja.individuos[j].rango==rango) 
+             {
+                  new_Elite.push_back(j);
+             }
+         }    
+         rango++;
+    }     
+     
+    
+    // while (new_Elite.size() > Elite)
+    while (new_Elite.size() > pobvieja.tampob)         
+    {
+        double min_dist = DBL_MAX;
+        int jmin=0;
+        for (i=0;i<new_Elite.size();i++)
+            for (j=0;j<new_Elite.size();j++)
+                if ((i!=j) && (min_dist < pobvieja.individuos[new_Elite[i]].distancias[new_Elite[j]])) {
+                    min_dist = pobvieja.individuos[new_Elite[i]].distancias[new_Elite[j]];
+                    jmin = j;
+                }     
+                
+        new_Elite.erase(new_Elite.begin()+jmin);          
+    }    
+    short nE = new_Elite.size();
+    
+    for (i=0;i<nE;i++)
+       pobnueva.individuos[i] = pobvieja.individuos[new_Elite[i]];
+
+    
+    //-----------------------------------------------------------------------------//
+
+    tic();
+
+    j = nE+brecha;
+    
+    if (j > pobvieja.tampob) j = pobvieja.tampob;
+    
+    // brecha generacional
+    for (i=nE; i<j; i++)
+        pobnueva.individuos[i] = pobvieja.individuos[seleccion(pobvieja.tampob, sumaptitud, &pobvieja, seltype)];
+ 
+    cromosoma newbie1, newbie2;
+
+    int mutcount=0;
+    
+    while ( j < pobvieja.tampob ) // do
+    {
+        mate1 = seleccion(pobvieja.tampob, sumaptitud, &pobvieja, seltype);
+        mate2 = seleccion(pobvieja.tampob, sumaptitud, &pobvieja, seltype);
+
+        newbie1 = mutacion(pobvieja.individuos[mate1].crom, pmutacion, mutatype, pobnueva.NMutas);
+        newbie2 = mutacion(pobvieja.individuos[mate2].crom, pmutacion, mutatype, pobnueva.NMutas);
+
+        mutcount=0;
+        for (int r=0;r<pobvieja.lcrom;r++){
+            if (newbie1[r] != pobvieja.individuos[mate1].crom[r]){
+                mutcount = mutcount+1;
+            }    
+        }  
+
+        mutcount=0;
+        for (int r=0;r<pobvieja.lcrom;r++){
+            if (newbie2[r] != pobvieja.individuos[mate2].crom[r]){
+                mutcount = mutcount+1;
+            }    
+        }    
+    
+        if (j<(pobvieja.tampob-1)) cruza(newbie1, newbie2, &pobnueva.individuos[j].crom, &pobnueva.individuos[j+1].crom, pobvieja.lcrom, pcruza);
+        else  cruza(newbie1, newbie2, &pobnueva.individuos[j].crom, &pobnueva.individuos[j].crom, pobvieja.lcrom, pcruza);
+
+        pobnueva.individuos[j].padre1 = mate1;
+        pobnueva.individuos[j].padre2 = mate2;
+
+        if (j<(pobvieja.tampob-1))
+        {
+            pobnueva.individuos[j+1].padre1 = mate2;
+            pobnueva.individuos[j+1].padre2 = mate1;
+        }
+
+        j = j + 2;
+
+    } // while ( j <= (pobvieja.tampob-1));
+    
+   
+    /*------ MPI VARIOS + Var Paralelizacion ------*/
+
+    MPI_Request request[nproc];
+    MPI_Status status;
+    int buffer[pobvieja.lcrom];
+    int flag;
+    bool busys[nproc];
+    double aptitud[nproc][nObjctvs];
+    double *pointApt;
+    int map[nproc];
+    int tag;
+    int params[2];
+    unsigned nf;
+
+    /*---------------------------------------------*/
+
+    seed = 5;          // aca no utilizo la semilla
+    params[0] = pobvieja.lcrom; // cambia segun pob principal o subpob 
+    params[1] = 1;     // 1 indica pob principal; 2 indica subpob
+    
+   // repartir calculos de aptitud entre nodos
+    
+    for (i=0;i<nproc;i++) busys[i] = false;
+    tag = 1000 + nproc;
+    j = Elite+brecha; // los valores anteriores de los objetivos sirven, lo que hay que recalcular es el FITNESS
+    while (j<pobvieja.tampob)
+    {
+       nf = Verificar(&pobnueva.individuos[j]);
+       for (i=0;((i<nproc)&&(j<pobvieja.tampob));i++)
+       {
+           if  (!busys[i])
+           {
+               map[i]=j;
+               for (k=0;k<pobvieja.lcrom;k++)
+                  if (pobnueva.individuos[j].crom[k]) buffer[k] = 1; else buffer[k] = 0;
+               MPI_Send(buffer, pobvieja.lcrom, MPI_INTEGER, i, tag, everyone);
+      
+               busys[i] = true;
+               pointApt = &(aptitud[i][0]);
+               MPI_Irecv(pointApt, nObjctvs, MPI_DOUBLE, i, tag, everyone, &request[i]);
+               j++;
+           }
+       }
+
+       for (i=0;i<nproc;i++)
+       {
+           flag = 0;
+           if (busys[i]) MPI_Test(&request[i],&flag,&status);
+           if (flag == 1)
+           {
+               busys[i] = false;
+               
+               // for (k=0;k<nObjctvs;k++) pobnueva.individuos[map[i]].aptitud[k] = aptitud[i][k];    // MOGA               
+               for (k=0;k<nObjctvs;k++) {
+                   pobnueva.individuos[map[i]].aptitud[k] = aptitud[i][k];  // MOGA
+                   if (aptitud[i][k]>aptitud_max[k]) aptitud_max[k]=aptitud[i][k];
+                   if (aptitud[i][k]<aptitud_min[k]) aptitud_min[k]=aptitud[i][k];
+               }
+               
+           }
+       }
+       
+    }
+
+    for (i=0;i<nproc;i++)
+    {
+       if (busys[i])
+       {
+           flag = 0;
+           while (flag!=1) MPI_Test(&request[i],&flag,&status);
+           busys[i] = false;
+           // for (k=0;k<nObjctvs;k++) pobnueva.individuos[map[i]].aptitud[k] = aptitud[i][k];    // MOGA
+           for (k=0;k<nObjctvs;k++) {
+               pobnueva.individuos[map[i]].aptitud[k] = aptitud[i][k];  // MOGA
+               if (aptitud[i][k]>aptitud_max[k]) aptitud_max[k]=aptitud[i][k];
+               if (aptitud[i][k]<aptitud_min[k]) aptitud_min[k]=aptitud[i][k];
+           }
+       }
+    }
+
+    /*
+    for (j=0;j<pobvieja.tampob;j++){
+       nf = Verificar(&pobnueva.individuos[j]);
+       cout << ">> gen " << gen <<  " indiv " << j << " aptitud 1: " << pobnueva.individuos[j].aptitud[1]  << " | " << 1 -((float) nf)/pobvieja.lcrom  << " | " << nf << "  ||  " << (0.000001<abs(pobnueva.individuos[j].aptitud[1]  -  (1 -((float) nf)/pobvieja.lcrom)))  <<  endl;    
+    } 
+    */
+   
+    CalcularFitness(pobnueva);
+
+    ImprimirFrente(pobnueva, gen, max);
+
+    cout << "Generacion " << gen << " - Obj1: " << pobnueva.individuos[0].aptitud[0] << ", Obj2: " << pobnueva.individuos[0].aptitud[1] << ", Fsize: " << pobnueva.Current_Front_Size << endl;
+    
+    toc();
+    
+    return;
+
+}
+//===================================================================
+
+
+
+
+double AG::distancia(individuo indiv_x, individuo indiv_y, int in_cromlen, short nObjctvs, short dist_opt)
+{
+
+    double aux, dist = 0.0;
+    
+    if (dist_opt==0) 
+    {
+        for (int r=0;r<in_cromlen;r++) 
+            if (indiv_x.crom[r]!=indiv_y.crom[r]) dist=dist+1.0;     
+        // dist = sqrt(dist/in_cromlen);  
+        dist = (dist/in_cromlen); 
+       
+    } else if (dist_opt==1) 
+    {
+        for (int r=0;r<nObjctvs;r++)
+        {
+            aux = (indiv_x.aptitud[r]-indiv_y.aptitud[r]) / (aptitud_max[r]-aptitud_min[r]);
+            dist = dist + fabs(aux);
+        }
+        // dist = sqrt(dist/nObjctvs);
+        dist = (dist/nObjctvs);
+        
+    } else 
+    {         
+        dist = 1.0;
+    } 
+    
+    return dist;
+}            
+
+// void AG::CalcularFitness(poblacion &inPOB, int in_pobsize, int in_cromlen)
+// {
+//     // recalcular segun reglas del MOGA
+//     //     
+//     // calculo el rango r(x,t) para cada individuo
+//     int i, k, j, mxrango=0;
+//     double acum;
+//     //tic();
+// 
+//     for (j=0;j<in_pobsize;j++) {
+//         inPOB.individuos[j].rango = 1;
+//         inPOB.individuos[j].distancias.resize(in_pobsize);
+//     }    
+//  
+//     
+//     bool flag1, flag2;
+//     for (j=0;j<in_pobsize;j++)
+//     {   
+// 
+//         inPOB.individuos[j].distancias[j]=0.0;
+//         for (i=0;i<j;i++)
+//         {    
+//             // contar las soluciones q dominan a j
+//             flag1=true; flag2=false;
+//             if (i!=j) for (k=0;k<nObjctvs;k++) 
+//             {  
+//                 if (inPOB.individuos[i].aptitud[k] < inPOB.individuos[j].aptitud[k]) { flag1=false; break; }
+//                 if (inPOB.individuos[i].aptitud[k] > inPOB.individuos[j].aptitud[k]) flag2=true; 
+//             }
+//             if ((flag1) && (flag2)) inPOB.individuos[j].rango++;  // r(x,t)=1+nq(x,t)
+//             
+//             // contar las soluciones q dominan a i
+//             flag1=true; flag2=false;
+//             if (i!=j) for (k=0;k<nObjctvs;k++) 
+//             {  
+//                 if (inPOB.individuos[j].aptitud[k] < inPOB.individuos[i].aptitud[k]) { flag1=false; break; }
+//                 if (inPOB.individuos[j].aptitud[k] > inPOB.individuos[i].aptitud[k]) flag2=true; 
+//             }
+//             if ((flag1) && (flag2)) inPOB.individuos[i].rango++;  // r(x,t)=1+nq(x,t)
+//             
+//             if (inPOB.individuos[i].rango>mxrango) mxrango = inPOB.individuos[i].rango;
+//             if (inPOB.individuos[j].rango>mxrango) mxrango = inPOB.individuos[j].rango;
+//             
+//             // calcular las distancia de cada solucion i a j            
+//             inPOB.individuos[j].distancias[i] = distancia(inPOB.individuos[i],inPOB.individuos[j],in_cromlen,nObjctvs,dist_opt);
+//             inPOB.individuos[i].distancias[j] = inPOB.individuos[j].distancias[i];
+// 
+//         }
+// 
+//     }
+//     
+//     vector <short> nk;
+//     double ax, axc;
+//     // calcular niche count y fitness
+//     for (j=0;j<in_pobsize;j++)
+//     {   
+//         inPOB.individuos[j].nr = 0;
+//         inPOB.individuos[j].ncount = 1;
+//     }
+//     for (j=0;j<in_pobsize;j++)
+//     {           
+//         for (i=0;i<=j;i++)
+//         {   
+//             // calcular niche count, y nr
+//             if ((inPOB.individuos[i].rango == inPOB.individuos[j].rango)){  // &&(i!=j)
+//                inPOB.individuos[j].nr++; // numero de individuos que comparten el rango
+//                inPOB.individuos[i].nr++;
+//                
+//                // acum = max((sigma_share - inPOB.individuos[j].distancias[i])/sigma_share, 0);
+//                acum = sharing_fun(inPOB.individuos[j].distancias[i], sigma_share, alfa_share);
+//                
+//                inPOB.individuos[j].ncount = inPOB.individuos[j].ncount + acum; // nc(x,t)
+//                inPOB.individuos[i].ncount = inPOB.individuos[i].ncount + acum; // nc(x,t)
+//                
+//             }
+//         }
+//     }   
+//     nk.resize(mxrango);
+//     for (k=0;k<mxrango;k++)
+//     {
+//         nk[k] = 0;
+//         for (i=0;i<in_pobsize;i++) if (((int) inPOB.individuos[i].rango) == (k+1)){ nk[k]++; }          
+//     }
+//     for (j=0;j<in_pobsize;j++)
+//     { 
+//         // calcular fitness
+//         axc = 0;
+//         inPOB.individuos[j].Fitness = in_pobsize;
+//         for (k=0;k<((int) inPOB.individuos[j].rango-1);k++) 
+//         {            
+//             ax = nk[k] - 0.5*(inPOB.individuos[j].nr - 1);
+//             axc = axc + std::max(ax,0.0);            
+//         }    
+//         inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness - axc;
+//         
+//         if (inPOB.individuos[j].Fitness<=0) cout << endl << endl <<  " @#@#@#@#@#@#@@# cero !!!!!"  <<  " " << axc << " " << in_pobsize  << " " << nk[0] << endl << endl;
+// 
+//         // calcular shared fitness
+//         inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness / inPOB.individuos[j].ncount;
+//     }
+// 
+//     vector <short> acumSFitness;
+//     acumSFitness.resize(mxrango);
+//     for (k=0;k<mxrango;k++) acumSFitness[k]=1.0;
+//         
+//     for (j=0;j<in_pobsize;j++) 
+//         acumSFitness[inPOB.individuos[j].rango-1] += inPOB.individuos[j].sFitness;                
+//     
+//     max = 0;
+//     // recalcular fitness
+//     for (j=0;j<in_pobsize;j++)
+//     {   
+//         inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].sFitness*inPOB.individuos[j].nr/acumSFitness[inPOB.individuos[j].rango-1];
+//         if (max<inPOB.individuos[j].Fitness)  max = inPOB.individuos[j].Fitness;           
+// 
+//     }  
+//     
+//     Current_Front_Size = 0;
+//     for (j=0;j<in_pobsize;j++)
+//     {   
+//         if (max==inPOB.individuos[j].Fitness) Current_Front_Size++;           
+// 
+//     }  
+//        
+//     //toc();
+//     
+//     return;    
+// }
+
+void AG::CalcularFitness(poblacion &inPOB)
+{
+    // recalcular segun reglas del MOGA
+    //     
+    // calculo el rango r(x,t) para cada individuo
+    int i, k, j, mxrango=0;
+    double acum;
+    //tic();
+
+    for (j=0;j<inPOB.tampob;j++) {
+        inPOB.individuos[j].rango = 1;
+        inPOB.individuos[j].distancias.resize(inPOB.tampob);
+    }    
+ 
+    inPOB.mean_dist = 0;
+    bool flag1, flag2;
+    for (j=0;j<inPOB.tampob;j++)
+    {   
+
+        inPOB.individuos[j].distancias[j]=0.0;
+        for (i=0;i<inPOB.tampob;i++)
+        {    
+            // contar las soluciones q dominan a j
+            flag1=true; flag2=false;
+            if (i!=j) for (k=0;k<nObjctvs;k++) 
+            {  
+                if (inPOB.individuos[i].aptitud[k] < inPOB.individuos[j].aptitud[k]) { flag1=false; break; }
+                if (inPOB.individuos[i].aptitud[k] > inPOB.individuos[j].aptitud[k]) flag2=true; 
+            }
+            if ((flag1) && (flag2)) inPOB.individuos[j].rango++;  // r(x,t)=1+nq(x,t)
+            
+            if (inPOB.individuos[j].rango>mxrango) mxrango = inPOB.individuos[j].rango;
+            
+            // calcular las distancia de cada solucion i a j            
+            inPOB.individuos[j].distancias[i] = distancia(inPOB.individuos[i],inPOB.individuos[j],inPOB.lcrom,nObjctvs,dist_opt);
+            inPOB.mean_dist = inPOB.mean_dist + inPOB.individuos[j].distancias[i];
+        }
+
+    }
+    inPOB.mean_dist =  inPOB.mean_dist / (inPOB.tampob*inPOB.tampob);
+
+    vector <short> nk;
+    double ax, axc;
+    // calcular niche count y fitness
+    for (j=0;j<inPOB.tampob;j++)
+    {   
+        inPOB.individuos[j].nr = 0;
+        inPOB.individuos[j].ncount = 1;
+    }
+    
+    for (j=0;j<inPOB.tampob;j++)
+    {           
+        // for (i=j;i<inPOB.tampob;i++)
+        for (i=0;i<inPOB.tampob;i++)
+        {   
+            // calcular niche count, y nr
+            // if ((inPOB.individuos[i].rango == inPOB.individuos[j].rango)){  // &&(i!=j)
+            /*
+            if ((inPOB.individuos[i].rango == inPOB.individuos[j].rango)&&(i!=j)) {
+               inPOB.individuos[j].nr++; // numero de individuos que comparten el rango
+               
+               // acum = std::max((sigma_share - inPOB.individuos[j].distancias[i])/sigma_share,0.0);
+               acum = sharing_fun(inPOB.individuos[j].distancias[i], sigma_share, alfa_share);
+               
+               inPOB.individuos[j].ncount = inPOB.individuos[j].ncount + acum; // nc(x,t)
+            }
+            */
+            if ((inPOB.individuos[i].rango == inPOB.individuos[j].rango)&&(i!=j)) {
+               inPOB.individuos[i].nr++; // numero de individuos que comparten el rango               
+               acum = sharing_fun(inPOB.individuos[i].distancias[j], sigma_share, alfa_share);
+               inPOB.individuos[i].ncount = inPOB.individuos[i].ncount + acum; // nc(x,t)
+            }
+        }
+    }
+  
+    nk.resize(mxrango);
+    for (k=0;k<mxrango;k++)
+    {
+        nk[k] = 0;
+        for (i=0;i<inPOB.tampob;i++) if (((int) inPOB.individuos[i].rango) == (k+1)){ nk[k]++; }          
+    }
+    for (j=0;j<inPOB.tampob;j++)
+    { 
+        // calcular fitness
+        axc = 0;
+        inPOB.individuos[j].Fitness = inPOB.tampob;
+        for (k=0;k<((int) inPOB.individuos[j].rango-1);k++) 
+        {            
+            // ax = nk[k] - 0.5*(inPOB.individuos[j].nr - 1);
+            // axc = axc + std::max(ax,0.0);            
+            axc = axc + nk[k];
+        }    
+        // inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness - axc - 0.5*(inPOB.individuos[j].nr - 1);
+        // inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness - axc;
+        inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness - inPOB.individuos[j].rango;
+        // calcular shared fitness
+        inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness / inPOB.individuos[j].ncount;
+    }
+
+    vector <short> acumSFitness;
+    acumSFitness.resize(mxrango);
+    for (k=0;k<mxrango;k++) acumSFitness[k]=1.0;
+        
+    for (j=0;j<inPOB.tampob;j++) 
+        acumSFitness[inPOB.individuos[j].rango-1] += inPOB.individuos[j].sFitness;                
+    for (j=0;j<inPOB.tampob;j++) {
+        if (acumSFitness[inPOB.individuos[j].rango-1]==0.0) acumSFitness[inPOB.individuos[j].rango-1] = 1.0;
+        if (acumSFitness[inPOB.individuos[j].rango-1] <0.0) acumSFitness[inPOB.individuos[j].rango-1] = 0.0; //-1.0*acumSFitness[inPOB.individuos[j].rango-1]; 
+    }    
+
+    max = 0;
+    // recalcular fitness
+    for (j=0;j<inPOB.tampob;j++)
+    {   
+// !!!  // inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].sFitness*inPOB.individuos[j].nr/acumSFitness[inPOB.individuos[j].rango-1];
+        // inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].sFitness*(inPOB.tampob-inPOB.individuos[j].nr)/acumSFitness[inPOB.individuos[j].rango-1];
+        inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].sFitness/acumSFitness[inPOB.individuos[j].rango-1];
+        if (max<inPOB.individuos[j].Fitness)  max = inPOB.individuos[j].Fitness;           
+                
+        // inPOB.individuos[j].Fitness  = inPOB.individuos[i].rango;
+        // if (max<inPOB.individuos[j].Fitness)  max = inPOB.individuos[j].Fitness;           
+    }  
+ 
+    inPOB.Current_Front_Size = 0;
+    /*
+    for (j=0;j<inPOB.tampob;j++)
+    {   
+        if (max==inPOB.individuos[j].Fitness) inPOB.Current_Front_Size++;           
+
+    }  
+    */       
+    int aux_rank=inPOB.tampob;
+    for (j=0;j<inPOB.individuos.size();j++) 
+        if (aux_rank > inPOB.individuos[j].rango) aux_rank = inPOB.individuos[j].rango;            
+    for (j=0;j<inPOB.individuos.size();j++) 
+        if (aux_rank == inPOB.individuos[j].rango) inPOB.Current_Front_Size++;  
+       
+    //toc();
+    
+    return;    
+}
+
+
+
+// crea las subpoblaciones y las hace evolucionar
+//===================================================================
+void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int nproc, int Nsubpobs, int tamSubPob, int NGenSubPob, string cfg_settings)
+{
+
+    short c, i, k, j;
+    float auxfit, imax;
+    individuo elegido, auxiliar;
+    vector <short> elegidos;
+    bool desorden, repetidos;
+    individuo borrador;
+    short eraser;
+    vector <short> indice;
+    
+    Dictionary SETTINGS(cfg_settings.c_str());
+     
+    string T_reemplazo = SETTINGS.get_str("SubPob_Replace_Type");
+
+    for (j=0;j<pobnueva.tampob;j++) indice.push_back(j);    
+    // ordenamiento de la población
+    k = 0;    
+    do {
+      desorden = false;
+      for (j=0;j<(pobnueva.tampob-(k+1));j++)
+      {
+        // if (pobnueva.individuos[indice[j]].Fitness < pobnueva.individuos[indice[j+1]].Fitness)
+        if (pobnueva.individuos[indice[j]].rango > pobnueva.individuos[indice[j+1]].rango)
+        {
+          
+              eraser = indice[j];
+              indice[j] = indice[j+1];
+              indice[j+1] = eraser;
+              desorden = true;
+          
+              /* optimizo arriba usando un indice
+              eraser = pobnueva.individuos[j];
+              pobnueva.individuos[j] = pobnueva.individuos[j+1];
+              pobnueva.individuos[j+1] = eraser;
+              */
+              desorden = true;  
+        }
+      }
+      k++;
+    }  while (desorden);
+    // guardo los Nsubpobs elegidos
+    //--------------------------------//
+
+
+    if (Nsubpobs>pobnueva.tampob) Nsubpobs = pobnueva.tampob;
+    
+    unsigned Nf,Ns=0; j=0;
+    while ((Ns<Nsubpobs)&&(j<pobnueva.tampob)) {   
+        Nf = Verificar(&pobnueva.individuos[indice[j]]);
+        if (Nf>1){
+           elegidos.push_back(indice[j]);
+           Ns++;
+        }   
+        j++;
+    }    
+    if (Ns<Nsubpobs) Nsubpobs=Ns;
+    
+    // for (j=(Nsubpobs-1);j>=0;j--) elegidos.push_back(indice[j]);
+
+    // para evitar sub-poblaciones repetidas
+    do {
+      repetidos = false;
+      desorden = false;
+      
+      for (j=0;j<(Nsubpobs-1);j++)  {
+        
+          for (int jj=j+1;jj<Nsubpobs;jj++)  {
+          for (k=0;k<pobnueva.lcrom;k++)
+              if (pobnueva.individuos[elegidos[j]].crom[k] != pobnueva.individuos[elegidos[jj]].crom[k]) desorden = true;
+        
+          if (!desorden) {
+            repetidos = true;
+            for (k=jj;k<Nsubpobs;k++){
+              if (pobnueva.tampob<(elegidos[k]+1)) elegidos[k]+=1; else repetidos = false;
+            }  
+          } else repetidos = false;
+          }
+      }
+    }  while (repetidos);
+   
+    
+    //          SUBPOBLACIONES          //
+    //----------------------------------//
+    
+    poblacion subpob[Nsubpobs];
+    
+    bool replace_flag = true;
+    
+    // Recorro de las subpobs
+    for (j=0;j<Nsubpobs;j++) {
+
+        imax = 0;
+      
+        subpob[j].individuos.resize(tamSubPob);
+        subpob[j].tampob = tamSubPob;
+      
+        /*
+        subpob[j].lcrom = 0;              
+        for (k=0;k<subpob[j].lcrom;k++) { 
+            if (pobnueva.individuos[elegidos[j]].crom[k]) subpob[j].lcrom++;
+        } 
+        */
+        subpob[j].lcrom = Verificar(&pobnueva.individuos[elegidos[j]]);
+        
+        // Inicializacion de cada subpob
+        for (i=0;i<tamSubPob;i++)
+        {
+            subpob[j].individuos[i].crom.resize(subpob[j].lcrom);
+            subpob[j].individuos[i].index.resize(0);
+            subpob[j].individuos[i].aptitud.resize(nObjctvs);
+            // subpob[j].individuos[i].distancias.resize(tamSubPob);
+            
+            for (k=0;k<pobnueva.lcrom;k++) { 
+            // if (!pobnueva.individuos[elegidos[j]].crom[k]) 
+               if (pobnueva.individuos[elegidos[j]].crom[k]) subpob[j].individuos[i].index.push_back(k);
+            }  
+            if (i==0) { // 1ero copio el original con todos los genes
+                   for (k=0;k<subpob[j].lcrom;k++) { subpob[j].individuos[i].crom[k] = 1; }
+                   subpob[j].individuos[i].aptitud = pobnueva.individuos[elegidos[j]].aptitud;
+            } else {      // inicializo los otros aleatoriamente
+                   // for (k=0;k<subpob[j].lcrom;k++) { subpob[j].individuos[i].crom[k] = flip(0.5); }           // old init
+                   subpob[j].individuos[i].crom = initcrom(subpob[j].lcrom, activ_rate);                         // new init
+                   for (int ij=0;ij<(nObjctvs);ij++){ subpob[j].individuos[i].aptitud[ij] = 0; }
+            }  
+            subpob[j].individuos[i].padre1 = 0;
+            subpob[j].individuos[i].padre2 = 0;
+        }    
+        
+       
+        auxfit = 0;
+        c = 0;
+        elegido = subpob[j].individuos[0];
+        for (int g=0;g<NGenSubPob && c<=(NGenSubPob/10);g++){
+
+            tic();
+            
+            subpob[j] = generSubPob(subpob[j], brecha, seltype, mutatype, pmuta, nproc, imax, g);
+            elegido = subpob[j].individuos[0];
+
+            // cout << "> > > SubPob : Generacion " << j << " : "<< g << endl;
+            toc();
+
+            if (auxfit < elegido.aptitud[0])
+            {
+               auxfit = elegido.aptitud[0];               
+               c = 0;
+
+            } else c = c + 1;
+            
+            cout << "Generacion " << gen << ", SubPob "<< j+1 << ", Generacion SubPob " << g+1 << endl;
+            
+        }
+        if ((j+1)<Nsubpobs)
+        
+        
+        if ((T_reemplazo.compare("reemplazo_padre") == 0)||(T_reemplazo.compare("None") == 0)) {
+            // reemplazo solo el padre de la subpob si su fitness es mejorado
+            
+            // Evaluo si tengo que reemplazar
+            // if (elegido.aptitud[0] >= pobnueva.individuos[elegidos[j]].aptitud[0]){
+            // if (elegido.Fitness >= pobnueva.individuos[elegidos[j]].Fitness){   ->> no es comparable un Fitness de la pob general con uno de subpob
+            
+            replace_flag = true;
+            for (k=0;k<nObjctvs;k++)
+                if (elegido.aptitud[k] < pobnueva.individuos[elegidos[j]].aptitud[k]) replace_flag = false;
+            
+            if (replace_flag){                
+                // Reemplazar individuo
+                for (k=0;k<subpob[j].lcrom;k++){
+                    if (elegido.crom[k]) 
+                       pobnueva.individuos[elegidos[j]].crom[elegido.index[k]] = 1;  // en realidad no seria necesario
+                    else
+                       pobnueva.individuos[elegidos[j]].crom[elegido.index[k]] = 0;
+                }
+                
+                cout << "Generacion " << gen << ", SubPob "<< j+1 << " Reemplazo! " << endl;
+                string notify="Reemplazo de individuo de SubPob a POBLACION";
+                Notificar(notify);
+                
+                for (k=0;k<nObjctvs;k++) pobnueva.individuos[elegidos[j]].aptitud[k]=elegido.aptitud[k];
+                // Imprimir(pobnueva.individuos[elegidos[j]], gen, elegidos[j]);
+            
+            } else {
+                cout << "Generacion " << gen << ", SubPob "<< j+1 << " Mantengo. " << endl;
+            } 
+        }
+
+    }
+    
+    if ((T_reemplazo.compare("reemplazo_padre") == 0)||(T_reemplazo.compare("None") == 0)) CalcularFitness(pobnueva);
+    
+    if (T_reemplazo.compare("reemplazo_completo") == 0) {
+        // reemplazo todos los individuos de la pob general que sean mejorados por individuos de las subpobs
+        
+        auxiliar.evaluate = true;
+        auxiliar.crom.resize(pobnueva.lcrom);
+        auxiliar.aptitud.resize(nObjctvs);
+        auxiliar.Fitness = 0;
+
+        //  CREO SUPER-POBLACION
+        for (j=0;j<Nsubpobs;j++) {
+            
+            for (i=0;i<subpob[j].tampob;i++){
+            
+                for (k=0;k<pobnueva.lcrom;k++) auxiliar.crom[k] = 0;
+                
+                for (k=0;k<subpob[j].lcrom;k++){
+                   if (subpob[j].individuos[i].crom[k]) auxiliar.crom[subpob[j].individuos[i].index[k]] = 1;  
+                }
+                
+                for (int ij=0;ij<(nObjctvs);ij++)
+                    auxiliar.aptitud[ij] =  subpob[j].individuos[i].aptitud[ij];
+                
+                pobnueva.individuos.push_back(auxiliar);
+            }
+        }
+
+        CalcularFitness(pobnueva);
+
+        // ordenamiento de la SUPER-POBLACION
+        k = 0;    
+        do {
+           desorden = false;
+           for (j=0;j<((short) pobnueva.individuos.size()-(k+1));j++)
+           {
+               // if (pobnueva.individuos[j].aptitud[0] < pobnueva.individuos[j+1].aptitud[0])           //       <-- podría ser también
+               if (pobnueva.individuos[j].Fitness < pobnueva.individuos[j+1].Fitness)                    // parece la mejor opcion
+               // if (pobnueva.individuos[j].rango > pobnueva.individuos[j+1].rango)    -> no parece buena opcion segun resultados prelim
+               {
+                   borrador = pobnueva.individuos[j];
+                   pobnueva.individuos[j] = pobnueva.individuos[j+1];
+                   pobnueva.individuos[j+1] = borrador;
+                   desorden = true;
+               }
+           }
+           k++;
+        
+        }  while (desorden);
+        
+        // TRUNCADO DE LA SUPER-POBLACION
+        
+        pobnueva.individuos.resize(pobnueva.tampob); 
+    }
+    
+    //----------------------------------//
+
+    return;
+    
+}
+//===================================================================
+
+
+// realiza una generacion de una subpoblacion
+//===================================================================
+poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutatype, float pmutaSP, int nproc, float imax, short subgen)
+{
+    int i, k, j, mate1, mate2, aux;
+    float acum, seed;
+    int punto, bc = 1;
+    poblacion subpobnueva;
+    double sumaptitud = 0;
+
+    // Inicializacion subpob auxiliar
+    subpobnueva.individuos.resize(SubPob.tampob);
+    subpobnueva.lcrom = SubPob.lcrom;
+    subpobnueva.tampob = SubPob.tampob;
+    SubPob.NMutas = 0;
+    for (i=0;i<SubPob.tampob;i++)
+    {
+        subpobnueva.individuos[i].crom.resize(subpobnueva.lcrom);
+        subpobnueva.individuos[i].aptitud.resize(nObjctvs);
+        subpobnueva.individuos[i].index.resize(subpobnueva.lcrom);
+        /*
+        subpobnueva.individuos[i].index.resize(0);
+        for (j=0;j<subpobnueva.lcrom;j++)      
+            subpobnueva.individuos[i].index.push_back(SubPob.individuos[i].index[j]);
+        */
+    }
+    
+    //Busco el mejor y lo copio en la nueva generación (elitismo)
+    // acum = SubPob.individuos[0].Fitness;
+    aux = SubPob.individuos[0].rango;
+    punto = 0;
+    for (j=1;j<SubPob.tampob;j++)
+    {
+        sumaptitud = sumaptitud + SubPob.individuos[j].Fitness;
+        /*
+        if (SubPob.individuos[j].Fitness > acum)
+        {
+              acum = SubPob.individuos[j].Fitness;
+              punto = j;
+        }
+        */
+        if (SubPob.individuos[j].rango < aux)
+        {
+              aux = SubPob.individuos[j].rango;
+              punto = j;
+        }
+    }
+ 
+    //aca tengo j con el mayor fitness
+    subpobnueva.individuos[0] = SubPob.individuos[punto];
+    
+    if (subgen==0) // primera sub-generacion
+    {
+      for (i=0; i<SubPob.tampob; i++)
+      subpobnueva.individuos[i] = SubPob.individuos[i];
+    } else {
+      // brecha generacional
+      for (i=1; i<=brecha; i++)
+      subpobnueva.individuos[i] = SubPob.individuos[seleccion(SubPob.tampob, sumaptitud, &SubPob, seltype)];
+    }
+
+    //--------------------------------//
+  
+    cromosoma newbie1, newbie2;
+
+    if (subgen!=0){
+      j = brecha+1;
+      do
+      {
+      mate1 = seleccion(SubPob.tampob, sumaptitud, &SubPob, seltype);
+      mate2 = seleccion(SubPob.tampob, sumaptitud, &SubPob, seltype);
+
+      if (bc < brecha)
+      {
+          subpobnueva.individuos[bc] = SubPob.individuos[mate1];
+          bc++;
+      }
+
+      newbie1 = mutacion(SubPob.individuos[mate1].crom, pmutaSP, mutatype, SubPob.NMutas);
+      newbie2 = mutacion(SubPob.individuos[mate2].crom, pmutaSP, mutatype, SubPob.NMutas);
+
+     if (j<(SubPob.tampob-1)) cruza(newbie1, newbie2, &subpobnueva.individuos[j].crom, &subpobnueva.individuos[j+1].crom, subpobnueva.lcrom,  pcruza);
+     else  cruza(newbie1, newbie2, &subpobnueva.individuos[j].crom, &subpobnueva.individuos[j].crom, subpobnueva.lcrom,  pcruza);
+
+      subpobnueva.individuos[j].padre1 = mate1;
+      subpobnueva.individuos[j].padre2 = mate2;
+
+      if (j<(SubPob.tampob-1))
+      {
+          subpobnueva.individuos[j+1].padre1 = mate2;
+          subpobnueva.individuos[j+1].padre2 = mate1;
+      }
+
+      j = j + 2;
+
+      } while ( j <= SubPob.tampob-1);
+    }
+ 
+    /*------ MPI VARIOS + Var Paralelizacion ------*/
+
+    MPI_Request request[nproc];
+    MPI_Status status;
+    int buffer[pobnueva.lcrom];
+    int flag;
+    bool busys[nproc];
+    double aptitud[nproc][nObjctvs];
+    int map[nproc];
+    int tag;
+    int params[2];
+    unsigned nf;
+
+    /*---------------------------------------------*/
+
+    seed = 5;            // aca no utilizo la semilla
+    params[0] = pobnueva.lcrom;  
+    params[1] = 2;       // 1 indica pob principal; 2 indica subpob
+    
+    // repartir cálculos de aptitud entre nodos
+    for (i=0;i<nproc;i++) busys[i] = false;
+    tag = 1000 + nproc;
+
+    if (subgen==0) j = 1; else j = brecha+1;
+    
+    while (j<SubPob.tampob)
+    {
+       nf = Verificar(&subpobnueva.individuos[j]);
+       for (i=0;((i<nproc)&&(j<SubPob.tampob));i++)
+       {
+           if  (!busys[i])
+           {
+               /*
+               MPI_Send(params, 2, MPI_INTEGER, i, tag, everyone);
+               MPI_Send(&seed, 1, MPI_FLOAT, i, tag, everyone);  
+               MPI_Send(&nObjctvs, 1, MPI_INTEGER, i, tag, everyone);
+               */
+       
+               map[i]=j;
+               for (k=0;k<pobnueva.lcrom;k++) buffer[k] = 0;
+               for (k=0;k<subpobnueva.lcrom;k++){
+                  
+                  if (subpobnueva.individuos[j].crom[k]) buffer[subpobnueva.individuos[j].index[k]] = 1;
+               }  
+               
+               // cout << ">> sp " << j << " << lcrom " << lcrom <<  " subpobnueva.lcrom " << subpobnueva.lcrom << " last-index " << subpobnueva.individuos[j].index[subpobnueva.lcrom-1];
+               // for (k=0;k<lcrom;k++) cout << buffer[k] << "  ";
+               // cout << "\n";
+               
+               MPI_Send(buffer, pobnueva.lcrom, MPI_INTEGER, i, tag, everyone);
+               busys[i] = true;
+               MPI_Irecv(&aptitud[i], nObjctvs, MPI_DOUBLE, i, tag, everyone, &request[i]);
+               j++;
+           }
+       }
+    
+       for (i=0;i<nproc;i++)
+       {
+           flag = 0;
+           if (busys[i]) MPI_Test(&request[i],&flag,&status);
+           if (flag == 1)
+           {
+               busys[i] = false;
+               // subpobnueva.individuos[map[i]].aptitud = aptitud[i][0];
+               for (int ij=0;ij<nObjctvs;ij++)
+               {    
+                   subpobnueva.individuos[map[i]].aptitud[ij] = aptitud[i][ij];
+                   if (aptitud[i][ij]>aptitud_max[ij]) aptitud_max[ij]=aptitud[i][ij];
+                   if (aptitud[i][ij]<aptitud_min[ij]) aptitud_min[ij]=aptitud[i][ij];               
+               }    
+               if (imax<aptitud[i][0])
+               {
+                   imax = aptitud[i][0];
+                   // Imprimir(subpobnueva.individuos[map[i]], gen, map[i]);
+               }
+           }
+       }
+
+    }
+   
+    for (i=0;i<nproc;i++)
+    {
+       if (busys[i])
+       {
+           flag = 0;
+           while (flag!=1) MPI_Test(&request[i],&flag,&status);
+           busys[i] = false;
+           // subpobnueva.individuos[map[i]].aptitud = aptitud[i][0];
+           for (int ij=0;ij<nObjctvs;ij++) 
+           {
+               subpobnueva.individuos[map[i]].aptitud[ij] = aptitud[i][ij];               
+               if (aptitud[i][ij]>aptitud_max[ij]) aptitud_max[ij]=aptitud[i][ij];
+               if (aptitud[i][ij]<aptitud_min[ij]) aptitud_min[ij]=aptitud[i][ij];               
+           }
+
+           
+           int kk=0;
+           for (int rr=0;rr<subpobnueva.lcrom;rr++) if (subpobnueva.individuos[map[i]].crom[rr]) kk++;
+           
+           // cout << "........................................................> " << subpobnueva.individuos[map[i]].aptitud[1] << " : " << kk << endl;
+           
+           if (imax<aptitud[i][0])
+           {
+              imax = aptitud[i][0];
+              // Imprimir(subpobnueva.individuos[map[i]], gen, map[i]);
+           }
+       }
+    }
+  
+    CalcularFitness(subpobnueva);    
+
+    // ordenamiento de la sub-población    
+    individuo eraser;
+    bool desorden;
+    k = 0;    
+    do {
+      desorden = false;
+      for (j=0;j<(SubPob.tampob-(k+1));j++)
+      {
+        // if (subpobnueva.individuos[j].aptitud[0] < subpobnueva.individuos[j+1].aptitud[0])
+        if (subpobnueva.individuos[j].Fitness < subpobnueva.individuos[j+1].Fitness)
+        {
+              eraser = subpobnueva.individuos[j];
+              subpobnueva.individuos[j] = subpobnueva.individuos[j+1];
+              subpobnueva.individuos[j+1] = eraser;
+              desorden = true;
+        }
+      }
+      k++;
+    }  while (desorden);
+
+    SubPob = subpobnueva;    
+    
+    return(SubPob);
+  
+}
+//===================================================================
+
+
+
+double AG::sharing_fun(double dist, double sigma, double alfa)
+{
+    double sharing = 0.0;
+    
+    if (dist < sigma)
+        sharing = ( 1.0 - pow((dist/sigma),alfa) );
+    // cout << " --> " << dist << endl;
+    return sharing;
+}
+
+
+
+
+
+//===================================================================
+void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruza, double in_pmutacion, int nproc, float tasa_activ, string cfg_settings)
+{
+     int i, j, k;
+     float seed;
+
+     //Inicializa datos.
+     pobvieja.tampob = in_tampob;
+     pobnueva.tampob = in_tampob;
+     pobvieja.lcrom = in_lcrom;
+     pobvieja.NMutas = 0;
+     pobnueva.lcrom = in_lcrom;
+     maxgen = in_maxgen;
+     pcruza = in_pcruza;
+     pmutacion = in_pmutacion;
+     max = 0;
+     activ_rate = tasa_activ;
+
+     Dictionary SETTINGS(cfg_settings.c_str());
+     
+     string filename,folder;     
+     
+     folder = SETTINGS.get_str("outdir");
+     filename = SETTINGS.get_str("Filename");
+    
+     if (folder.compare("None") == 0){
+        folder=".";
+     }  else {
+        string cmd = "mkdir -p "+folder;
+        system(cmd.c_str());
+     }  
+     
+     if (filename.compare("None") == 0){
+     
+      if (nsubpob>0)
+          filename = folder+"/"+"MOELIGA+Subpobs_results_"+fecha+ string_aux_filename +".txt";
+      else
+          filename = folder+"/"+"MOELIGA_results_"+fecha+ string_aux_filename +".txt";
+     }
+     
+     if (nsubpob>0)
+          crom_file = folder+"/"+"MOELIGA+Subpobs_results_"+fecha+ string_aux_filename +".crom";
+     else
+          crom_file = folder+"/"+"MOELIGA_results_"+fecha+ string_aux_filename +".crom";
+     
+     
+     res_file = filename;
+     filename.insert(0," > ");
+     filename.insert(0,cfg_settings.c_str());     
+     filename.insert(0,"cat ");
+     system(filename.c_str());
+
+     aptitud_min.resize(nObjctvs);
+     aptitud_max.resize(nObjctvs);
+     for (i=0;i<nObjctvs;i++){
+         aptitud_min[i]=0.0;
+         aptitud_max[i]=0.0;
+     }
+     // Inicializacin de los vectores:
+     pobnueva.individuos.resize(pobnueva.tampob);
+     pobvieja.individuos.resize(pobnueva.tampob);
+     // pobnueva.orden.resize(tampob);
+     // pobvieja.orden.resize(tampob);
+
+     for (i=0;i<pobvieja.tampob;i++)
+     {
+         pobnueva.individuos[i].evaluate = true;
+         pobvieja.individuos[i].evaluate = true;
+         pobnueva.individuos[i].crom.resize(pobvieja.lcrom);     
+         pobvieja.individuos[i].crom.resize(pobvieja.lcrom);
+         pobvieja.individuos[i].aptitud.resize(nObjctvs);
+         pobnueva.individuos[i].aptitud.resize(nObjctvs);
+         // pobnueva.individuos[i].distancias.resize(pobvieja.tampob);
+         // pobvieja.individuos[i].distancias.resize(pobvieja.tampob);
+     }
+
+     /*------ MPI VARIOS + Var Paralelizacion ------*/
+
+     MPI_Request request[nproc];
+     MPI_Status status;
+     int buffer[pobvieja.lcrom];
+     int flag;
+     bool busys[nproc];
+     double aptitud[nproc][nObjctvs];
+     int map[nproc];
+     double acum=0, *pointApt;
+     int tag;
+     char *arg[3];
+     int params[2];
+     unsigned nf;
+
+     /*--------------------------------------------*/
+
+     // Iniciar los procesos en todos los nodos
+     for (i=0;i<nproc;i++)
+     {
+          busys[i] = false;
+     }
+
+     tag = 1000 + nproc;
+     arg[0] = itoa(tag,10);
+     arg[1] =  (char*) cfg_settings.c_str();
+     arg[2] = NULL;     
+
+     MPI_Comm_spawn((char*) slvbin.c_str(), arg, nproc, MPI_INFO_NULL, 0, MPI_COMM_SELF, &everyone, MPI_ERRCODES_IGNORE);
+
+     params[0] = pobvieja.lcrom;  
+     params[1] = 50;  // no utilizo esta variable
+
+     for (i=0;i<nproc;i++)
+     {
+         MPI_Send(params, 2, MPI_INTEGER, i, tag, everyone);
+         MPI_Send(&alfa, 1, MPI_FLOAT, i, tag, everyone);  
+         MPI_Send(&nObjctvs, 1, MPI_INTEGER, i, tag, everyone);
+     }
+      
+     // Inicializar poblacion
+     // y repartir calculos de aptitud entre nodos
+     j = 0;
+     while (j<pobvieja.tampob)
+     {
+          nf = Verificar(&pobvieja.individuos[j]);
+          for (i=0;((i<nproc)&&(j<pobvieja.tampob));i++)
+          {
+             pobvieja.individuos[j].crom = initcrom(pobvieja.lcrom, activ_rate);                                     // new init
+             pobvieja.individuos[j].padre1 = 0;
+             pobvieja.individuos[j].padre2 = 0;
+
+            
+             if  (!busys[i])
+             {
+                 map[i]=j;
+                 for (k=0;k<pobvieja.lcrom;k++)
+                    if (pobvieja.individuos[j].crom[k]) buffer[k] = 1; else buffer[k] = 0;
+                 MPI_Send(buffer, pobvieja.lcrom, MPI_INTEGER, i, tag, everyone);
+                 // MPI_Send(&seed, 1, MPI_INTEGER, i, tag, everyone);  // envio semilla
+                 busys[i] = true;
+                 pointApt=&(aptitud[i][0]);
+                 MPI_Irecv(pointApt, nObjctvs, MPI_DOUBLE, i, tag, everyone, &request[i]);
+                 j++;
+             }
+          }
+          
+          for (i=0;i<nproc;i++)
+          {
+              flag = 0;
+              if (busys[i]) MPI_Test(&request[i],&flag,&status);
+              if (flag == 1)
+              {
+                 busys[i] = false;
+                 for (k=0;k<nObjctvs;k++) {
+                     pobvieja.individuos[map[i]].aptitud[k] = aptitud[i][k];  // MOGA
+                     if (aptitud[i][k]>aptitud_max[k]) aptitud_max[k]=aptitud[i][k];
+                     if (aptitud[i][k]<aptitud_min[k]) aptitud_min[k]=aptitud[i][k];
+                 }    
+              }
+          }
+    }
+
+    for (i=0;i<nproc;i++)
+    {
+        if (busys[i])
+        {
+           flag = 0;
+           while (flag!=1) MPI_Test(&request[i],&flag,&status);
+           busys[i] = false;
+           // for (k=0;k<nObjctvs;k++) pobvieja.individuos[map[i]].aptitud[k] = aptitud[i][k];  // MOGA
+           for (k=0;k<nObjctvs;k++) {
+               pobvieja.individuos[map[i]].aptitud[k] = aptitud[i][k];  // MOGA
+               if (aptitud[i][k]>aptitud_max[k]) aptitud_max[k]=aptitud[i][k];
+               if (aptitud[i][k]<aptitud_min[k]) aptitud_min[k]=aptitud[i][k];
+           }    
+        }
+    }
+    
+    /*
+    for (j=0;j<tampob;j++){
+       nf = Verificar(&pobvieja.individuos[j]);
+       cout << ">> gen " << gen <<  " indiv " << j << " aptitud 1: " << pobvieja.individuos[j].aptitud[1]  << " | " << 1 -((float) nf)/lcrom  << " | " << nf << "  ||  " << pobvieja.individuos[j].aptitud[1]  -  (1 -((float) nf)/lcrom)  << endl;    
+    }   
+    */
+    
+    CalcularFitness(pobvieja);
+    
+    ImprimirFrente(pobvieja, gen, max);
+
+    return;
+
+}
+//===================================================================
+
+
+
+
+//===================================================================
+int AG::seleccion(int tampob, float sumaptitud, poblacion *pob, int caso)
+{
+  double random, sumaparc; // puntero de la ruleta, suma parcial
+  double frandom;
+  int j, k=0, irandom;
+
+  int tourn_size = ((int) (((double) tampob)*15.0/100));
+ 
+  poblacion &inpob = *pob;
+
+  switch ( caso )
+  {
+     case 1 :   // ruleta
+     {
+             j = 0;
+             sumaptitud = 0;
+             do {
+                   sumaptitud = sumaptitud + inpob.individuos[j].Fitness;
+                   j = j + 1;
+                   
+             } while (j < tampob-1);
+      
+             sumaparc = 0;
+
+             irandom = (rand()%100);
+             frandom = irandom;
+             frandom = frandom / 100;
+             random = frandom * sumaptitud;
+
+             j = 0;
+             do {
+                   sumaparc = sumaparc + inpob.individuos[j].Fitness;
+                   j = j + 1;
+             } while ((sumaparc < random) & (j < tampob-1));
+
+             return j;
+
+     }   // fin case 1
+
+     case 2 : // torneo
+     {
+         if (tourn_size>tampob) tourn_size = tampob;
+         
+         vector < int > chosen(tourn_size);
+
+         for  (j=0;j<tourn_size;j++)
+         {
+              irandom = (rand()%tampob);
+              chosen[j] = irandom;
+         }
+         double maxfit = inpob.individuos[chosen[0]].Fitness;
+         k = chosen[0];
+         for  (j=1;j<tourn_size;j++)
+         {
+              if (inpob.individuos[chosen[j]].Fitness > maxfit)
+              {
+                  k = chosen[j];
+                  maxfit = inpob.individuos[k].Fitness;
+              }
+         }
+         return k;
+     }   // fin case 2
+
+     case 3 :   // ventanas
+     {
+             individuo eraser;
+             bool desorden;
+             k = 0;
+             // ordenamiento de la poblacion
+             do {
+                    desorden = false;
+                    for (j=0;j<(tampob-(k+1));j++)
+                    {
+                          if (inpob.individuos[j].Fitness < inpob.individuos[j+1].Fitness)
+                          {
+                               eraser = inpob.individuos[j];
+                               inpob.individuos[j] = inpob.individuos[j+1];
+                               inpob.individuos[j+1] = eraser;
+                               desorden = true;
+                          }
+                    }
+                    k++;
+             }  while (desorden);
+
+             int winsize = tampob*40/100; // max ventana = 40% tamanio de poblacion
+             irandom = (rand()%(winsize-1))+1; // tamanio de ventana aleatorio
+             irandom = (rand()%irandom); // indice dentro de la ventana
+
+             return irandom;
+
+     }   // fin case 3
+
+  } // fin switch
+
+  return 0;
+} // fin seleccion
+//===================================================================
+
+
+
+
+
+//===================================================================
+bool AG::flip(float prob)
+{
+    long int irandom = (rand()%2147483640)+1;
+    double frandom;
+    frandom = irandom;
+    frandom = frandom / 2147483640;
+// cout << "-- > flip " << frandom << endl;
+    if (prob == 1)
+       { return true; }
+    else
+       { return (frandom <= prob);}
+}
+//===================================================================
+
+
+
+
+//===================================================================
+cromosoma AG::mutacion(cromosoma crom, double pmutacion, int caso, int &NMutas)
+{
+  cromosoma aux_crom;
+  
+  
+  
+  switch ( caso )
+  {
+      case 1 :   // de cromosoma
+        {
+                int rand_gen;
+                // rand_gen = ( rand() % crom.size())+1;
+                rand_gen = (rand() % crom.size());
+
+                aux_crom = crom;
+                if (flip(pmutacion)){
+                   aux_crom[rand_gen] = !aux_crom[rand_gen];
+                   NMutas = NMutas + 1;
+                }
+          break;
+      }
+
+      case 2 :  // de gen
+        {
+            double pmuta = pmutacion/crom.size();  
+            
+            unsigned j;
+            double pmutaD = pmuta;
+            
+            aux_crom = crom;
+            for (j=0;j<crom.size();j++)
+            {
+                    // discrimimar segun valor del gen
+                    // if (aux_crom[j]) pmutaD = 1.0*pmuta; else pmutaD = 0.7*pmuta;
+                      
+                    if (flip(pmutaD)){    
+                       aux_crom[j] = !aux_crom[j];
+                       NMutas = NMutas + 1;
+                    } 
+            }
+            
+            break;
+
+      }
+
+  } // fin switch
+  
+  unsigned nf = Verificar(&aux_crom);
+  
+  return aux_crom;
+} // fin mutacion
+//===================================================================
+
+
+
+
+//===================================================================
+void AG::cruza(cromosoma padre1, cromosoma padre2, cromosoma *hijo1, cromosoma *hijo2, int Nlcrom,  float pcruza)
+{
+
+   int jcruza, j;
+
+   if (flip(pcruza))
+   {
+      
+      jcruza = (rand()%Nlcrom); 
+   }
+   else { jcruza = Nlcrom; }
+
+   cromosoma &aux1 = *hijo1;
+   cromosoma &aux2 = *hijo2;
+
+   for (j=0;j<jcruza;j++)
+   {
+      aux1[j] = padre1[j];
+      aux2[j] = padre2[j];
+   }
+
+   for (j=jcruza;j<Nlcrom;j++)
+   {
+       aux1[j] = padre2[j];
+       aux2[j] = padre1[j];
+   }
+
+   j = Verificar(&aux1);
+   j = Verificar(&aux2);
+   
+   return;
+}
+//===================================================================
+
+
+
+
+
+
+//===================================================================
+void AG::Notificar(string notify)
+{
+    // Al archivo resultag.txt
+    string filename = res_file;
+    if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);
+    
+    results << endl;
+    results << ":: --> < AVISO >: " << notify.c_str() << endl;
+    results << endl;
+
+    results.close();
+}
+//===================================================================
+
+
+//===================================================================
+
+unsigned AG::Verificar(individuo *JohnDoe)
+{
+
+    individuo &indiv = *JohnDoe;
+    unsigned nf = 0;
+    
+    for (unsigned j=0;j<indiv.crom.size(); j++){
+        if (indiv.crom[j]) nf++;
+    }
+    
+    if (nf==0)
+    {
+       int rand_gen;
+       rand_gen = (rand() % indiv.crom.size());
+       indiv.crom[rand_gen] = true; 
+       nf++;
+    }
+    
+    return nf;
+}
+
+
+unsigned AG::Verificar(cromosoma *JohnDoe)
+{
+
+    cromosoma &cromo = *JohnDoe;
+    unsigned nf = 0;
+    
+    for (unsigned j=0;j<cromo.size(); j++){
+        if (cromo[j]) nf++;
+    }
+    
+    if (nf==0)
+    {
+       int rand_gen;
+       rand_gen = (rand() % cromo.size());
+       cromo[rand_gen] = true; 
+       nf++;
+    }
+    
+    return nf;
+}
+
+
+
+
+
+void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit)
+{
+    unsigned best_j = 0;
+    
+    /*
+    for (unsigned j=0;j<inPOB.individuos.size();j++) 
+        if (best_fit < inPOB.individuos[j].Fitness) best_fit = inPOB.individuos[j].Fitness;
+    */
+    short cnt = 0;
+/*    
+    for (unsigned j=0;j<inPOB.individuos.size();j++) 
+        if (best_fit == inPOB.individuos[j].Fitness){
+            
+              if (cnt>0) ImprimirCromo(inPOB.individuos[j], generac, j, false, inPOB.lcrom);
+              else ImprimirCromo(inPOB.individuos[j], generac, j, true), inPOB.lcrom;
+              cnt++;
+        }
+*/
+
+    int aux_rank=inPOB.tampob;
+    for (unsigned j=0;j<inPOB.individuos.size();j++) 
+    {
+        if (aux_rank > inPOB.individuos[j].rango){
+            aux_rank = inPOB.individuos[j].rango;            
+        }    
+    } 
+    for (unsigned j=0;j<inPOB.individuos.size();j++){ 
+       if (aux_rank == inPOB.individuos[j].rango)  {
+        //if ((aux_rank == inPOB.individuos[j].rango) || (generac==maxgen)) {  // for debugging
+            
+              if (cnt>0) ImprimirCromo(inPOB.individuos[j], generac, j, false, inPOB.lcrom);
+              else ImprimirCromo(inPOB.individuos[j], generac, j, true, inPOB.lcrom);
+              cnt++;
+       }  
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+//===================================================================
+
+//===================================================================
+void AG::ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront, int lcrom)
+{
+    indiv++; // empezaba en 0 y queda mas lindo que empieze en 1
+    
+    // Al archivo resultag.txt
+    string filename = res_file;
+    if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);
+    
+    results << endl;
+    results << "::> Generacion: " << generac << endl;
+    results << "::> Individuo: " << indiv << endl;
+    results << "::> Coeficientes Seleccionados: " <<  endl;
+    
+    int nc = 0;
+    for (int i=0;i<lcrom;i++)
+        {
+            if (johndoe.crom[i])
+            {
+               results << i+1 << " ";
+               nc++;
+            }
+        }
+     results << endl;
+     results << "::> Numero Coeficientes Seleccionados: " << nc << endl;
+     results << "::> Fitness: " << johndoe.Fitness << endl;
+     results << "::> Shared Fitness: " << johndoe.sFitness << endl;
+     results << "::> Rank: " << johndoe.rango << endl;
+     for (int i=0;i<(nObjctvs);i++)
+        results << "::> Objetivo " << i <<": "  << johndoe.aptitud[i] << endl;
+
+     results.close();
+     
+     // guardo los cromosoma en archivo separado para correr los tests
+    
+     ofstream best_crom;
+     if (newfront) best_crom.open(crom_file.c_str(), ofstream::out | ofstream::trunc);
+     else best_crom.open(crom_file.c_str(), ofstream::out | ofstream::app); 
+     
+     for (int i=0;i<lcrom;i++) if (johndoe.crom[i]) best_crom << i+1 << " ";
+     best_crom << endl;     
+     
+     best_crom.close();     
+     
+     return;
+}
+//===================================================================
+
+
+
+
+//===================================================================
+
+void AG::ImprimirGen(int generac, double maxfitness, double minfitness, double prom, poblacion &inPOB)
+{
+      time_t rawtime;
+      struct tm * timeinfo;
+
+      time ( &rawtime );
+      timeinfo = localtime ( &rawtime );
+      
+      string filename = res_file;
+      if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);
+          
+      results << " " << endl;
+      results << "|--------------------------------------------|" << endl;
+      results << "|    Generacion: " << generac << endl;
+      results << "|    Peor Fitness: " << minfitness << endl;
+      results << "|    Mejor Fitness: " << maxfitness << endl;
+      results << "|    Promedio Fitness: " << prom << endl;      
+      results << "|    Cantidad de Mutaciones: " << inPOB.NMutas << endl;
+      results << "|    Distancia de Media: " << inPOB.mean_dist << endl;
+      results << "|    "<< asctime (timeinfo); // << endl;
+      results << "|--------------------------------------------|" << endl;
+      results << " " << endl;
+      results.close();
+      
+      
+}      
+
+//===================================================================
+
+
+
+
+//===================================================================
+void AG::Terminar(int nproc, int lcrom)
+{
+      int buffer[lcrom];
+      int params[2];
+      float seed = 5;
+      int tag = 1000+nproc;
+      
+      buffer[0]=-5; // señal para matar todos los procesos creados
+      params[0]=lcrom;
+      params[1]=1;
+      
+      for (int i=0;i<nproc;i++)
+      { 
+          MPI_Send(params, 2, MPI_INTEGER, i, tag, everyone);
+          MPI_Send(&seed, 1, MPI_FLOAT, i, tag, everyone);  
+          MPI_Send(&nObjctvs, 1, MPI_INTEGER, i, tag, everyone);
+          MPI_Send(buffer, lcrom, MPI_INTEGER, i, tag, everyone);
+      }
+      
+      if (results.is_open()) results.close();
+      
+      MPI_Finalize();
+      
+}
+//===================================================================
+
+
+
+
+
+
+
+
+//#############################################
+// ------------- MAIN FUNCTION --------------
+//#############################################
+int main(int argc, char** argv)
+{
+    string cmd = "mpdallexit; mpdboot; export PATH=$PATH:$PWD";
+    system(cmd.c_str());
+    
+    string aux, cfg_settings = "SETTINGS.cfg";
+    
+    //=========================================
+    // BUSCO PARAMETROS EN LA LINEA DE COMANDOS
+    //-----------------------------------------
+        
+    for (int i=1;i<argc;i++)
+    {
+        aux = argv[i];
+
+        if (aux == "help")
+        {
+            cout << " - Algoritmo genético (versión en paralelo) -"<< endl;
+            cout << "ag [parametro1 valor1] [parametro2 valor2] [...] "<< endl;
+            cout << "\"npr valor\" número de procesadores esclavos (0)"<< endl;
+            cout << "\"pop valor\" tamaño de poblacion (100)" << endl;
+            cout << "\"crm valor\" tamaño del cromosoma (127)"<< endl;
+            cout << "\"gen valor\" máximo de generaciones (500)"<< endl;
+            cout << "\"cru valor\" probabilidad de cruza (0.9)"<< endl;
+            cout << "\"mut valor\" probabilidad de mutacion (0.05)"<< endl;
+            cout << "\"sel valor\" tipo de seleccion (1=RULETA, 2=competencia, 3=ventanas)"<< endl;
+            cout << "\"bre valor\" tamaño de brecha generacional"<< endl;
+            cout << "\"tmu valor\" tipo de mutacion (1=de cromosoma, 2 = de BIT)"<< endl;
+            cout << "\"nsu valor\" cantidad de sub-poblaciones (0 desactiva)"<< endl;
+            cout << "\"tsu valor\" tamanio de sub-poblaciones"<< endl;
+            cout << "\"gsu valor\" maximo de generaciones para las sub-poblaciones"<< endl;
+            cout << "\"cfg <cadena>\" nombre de archivo de configuracion"<< endl;
+            cout << "\"help\" esta ayuda."<< endl;
+
+            return 0;
+        }
+        
+        if (aux == "cfg") if (argc>=(i+1)) cfg_settings = argv[i+1];
+
+    }    
+    
+    //==================================
+    // LEVANTO ARCHIVO DE CONFIGURACION
+    //----------------------------------
+        
+    Dictionary SETTINGS(cfg_settings.c_str());
+    //==================================
+    
+    //==================================
+    // INICIALIZO MEDIDAS
+    //----------------------------------
+    
+    Measures MEASURES(SETTINGS.get_int("Gmax")+1);  // generacion 0 (pob inicial) + Gmax generaciones
+    //==================================
+    
+    cmd = SETTINGS.get_str("cmd");
+    cmd.erase(std::remove(cmd.begin(), cmd.end(), '\n'), cmd.end());
+
+    time_t rawtime;
+    struct tm * timeinfo; time ( &rawtime );
+    timeinfo = localtime ( &rawtime );
+  
+    AG AlgGen;
+    
+    char * fecha = asctime(timeinfo);
+    fecha[strlen(fecha)-1] = '\0';
+    for (unsigned count = 0; count < strlen(fecha); count++)
+       if (fecha[count] == ' ')  fecha[count] = '_';
+    for (unsigned count = 0; count < strlen(fecha); count++)
+       if (fecha[count] == ':')  fecha[count] = '.';   
+    char faux[strlen(fecha)];
+    for (unsigned count = 0; count < strlen(fecha); count++)
+       faux[count] = fecha[count];
+    
+    fecha[0]=faux[4];fecha[1]=faux[5];fecha[2]=faux[6];
+    fecha[4]=faux[8];fecha[5]=faux[9];fecha[6]=faux[7];
+    fecha[7]=faux[0];fecha[8]=faux[1];fecha[9]=faux[2];    
+    
+    AlgGen.fecha = fecha;
+    AlgGen.slvbin = cmd;
+ 
+    AlgGen.nObjctvs = SETTINGS.get_int("NObjetivos");
+    
+    short count = 0;
+    float last_max = 0;
+    resultado result;
+  
+    short nproc = SETTINGS.get_int("NProcesos"); 
+    short maxgen = SETTINGS.get_int("Gmax");
+    
+    short popsize = SETTINGS.get_int("Nindividuos");//8; //100;
+    short cromsize = SETTINGS.get_int("Ngenes");//16063;      // GCM
+    float tasa_activ = SETTINGS.get_dbl("TasaActivacionInicial");
+
+    double  pmuta = SETTINGS.get_dbl("pm");//0.15/cromsize; // 0.000015; 
+    short   tmuta = SETTINGS.get_int("OpMutacion");//2; // 2 = mutacion de bit
+    double pcruza = SETTINGS.get_dbl("px");//0.85;
+    short  brecha = SETTINGS.get_int("Brecha");//0
+    short  tselec = SETTINGS.get_int("OpSeleccion");//2,
+    AlgGen.Elite = SETTINGS.get_int("E"); 
+    
+    short  steady = SETTINGS.get_int("steady");
+    double fitmax = SETTINGS.get_dbl("fitmax");
+
+    // Mutacion con decaimiento ->
+    bool muta_expo   = false;
+    bool muta_amorti = false;
+    muta_expo   = SETTINGS.get_bool("Exponencial");
+    muta_amorti = SETTINGS.get_bool("Amortiguada");
+    
+    float A_am    = SETTINGS.get_dbl("amA");
+    float f_am    = SETTINGS.get_dbl("amF");
+    float phi_am  = SETTINGS.get_dbl("amPhi");
+   
+    double gamma_ini=0;
+    double gamma_fin=0;
+    if (muta_expo) {
+         gamma_ini = SETTINGS.get_dbl("GammaINI");
+         gamma_fin = SETTINGS.get_dbl("GammaFIN");
+    }      
+    
+    double sigma_share=0, alfa_share=0;    // PARAMETROS PARA FUNCION DE FITNESS SHARING
+    
+    AlgGen.sigma_share = SETTINGS.get_dbl("SigmaShare");
+    AlgGen.alfa_share  = SETTINGS.get_dbl("AlfaShare");
+    AlgGen.dist_opt = SETTINGS.get_int("dist_opt");    
+    
+    //     <-    
+    
+    // parametros para SUBPOBLACIONES ->       
+    short Nsubpobs = SETTINGS.get_int("NSubPoblaciones");//0; //4; 
+    short tamSubPob = SETTINGS.get_int("Nindividuos_s");//20;
+    short NGenSubPob = SETTINGS.get_int("Gmax_s");//50;
+    short nGenSinSubpob = SETTINGS.get_int("SPobWait");//50;    
+    //     <-    
+    short ngs = 0; 
+    
+    double y_am,t_am; 
+
+    srand((unsigned)time(0));
+    
+    for (int i=1;i<argc;i++)
+    {
+        aux = argv[i];
+
+        if (aux == "npr") {
+            if (argc>=(i+1)) {
+               nproc = atoi(argv[i+1]);
+               if (nproc == 0) nproc = 1;
+            }
+        }
+
+        if (aux == "pop") if (argc>=(i+1)) popsize = atoi(argv[i+1]);
+        if (aux == "crm") if (argc>=(i+1)) cromsize = atoi(argv[i+1]);
+        if (aux == "gen") if (argc>=(i+1)) maxgen = atoi(argv[i+1]);
+        if (aux == "cru") if (argc>=(i+1)) pcruza = atof(argv[i+1]);
+        if (aux == "mut") if (argc>=(i+1)) pmuta = atof(argv[i+1]);
+        if (aux == "bre") if (argc>=(i+1)) brecha = atoi(argv[i+1]);
+        if (aux == "sel") if (argc>=(i+1)) tselec = atoi(argv[i+1]);
+        if (aux == "tmu") if (argc>=(i+1)) tmuta = atoi(argv[i+1]);
+        if (aux == "nsu") if (argc>=(i+1)) Nsubpobs = atoi(argv[i+1]);
+        if (aux == "tsu") if (argc>=(i+1)) tamSubPob = atoi(argv[i+1]);
+        if (aux == "gsu") if (argc>=(i+1)) NGenSubPob = atoi(argv[i+1]);
+
+    }    
+       
+    // DEFINO EL NOMBRE DEL ARCHIVO DE RESULTADOS
+    string filename,folder;
+    
+    filename = SETTINGS.get_str("Filename");    
+    folder = SETTINGS.get_str("outdir");
+    
+    if (folder.compare("None") == 0){
+        folder=".";
+    }  
+    
+    // AlgGen.string_aux_filename = "_(gammas:_"+tostr(gamma_ini)+"_"+tostr(gamma_fin)+")";
+    AlgGen.string_aux_filename = "";
+    
+    if (filename.compare("None") == 0){
+        
+        if (Nsubpobs>0)
+            filename = folder+"/"+"MOELIGA+Subpobs_results_"+AlgGen.fecha+ AlgGen.string_aux_filename +".json";
+        else
+            filename = folder+"/"+"MOELIGA_results_"+AlgGen.fecha+ AlgGen.string_aux_filename +".json";
+    }    
+    
+    if (maxgen==0) maxgen = 1700;
+    if (popsize==0) popsize = 100;
+    if (cromsize==0) cromsize = 127;
+    
+    AlgGen.gen = 0;
+    AlgGen.maxgen = maxgen;
+    AlgGen.nsubpob = Nsubpobs;
+
+    /*--------------------------------------------*/
+    /*          INICIALIZACION DE MPI             */
+
+    int rank, size;
+    MPI_Init(&argc,&argv);
+    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+    MPI_Comm_size(MPI_COMM_WORLD,&size);
+
+    /*--------------------------------------------*/
+
+    
+    // INICIALIZACION DEL ALGORITMO GENETICO
+    AlgGen.inicializar(popsize, cromsize , maxgen, pcruza, pmuta, nproc, tasa_activ, cfg_settings);
+    
+
+    result = AlgGen.resultados(AlgGen.pobvieja);
+    AlgGen.ImprimirGen(AlgGen.gen, result.maxfitness, result.minfitness, result.prom, AlgGen.pobvieja);
+    
+    MEASURES.Update(AlgGen.pobvieja, AlgGen.gen); // ACTUALIZO MEDIDAS
+    MEASURES.Save(filename, SETTINGS);
+    
+    do {
+
+        ngs++;
+        
+        // *******************************************************//
+        // generación(tamaño_brecha, tipo_selección, tipo_mutación);
+        // tipo_selección: 1 = ruleta, 2 = competencia, 3 = ventanas
+        // tipo_mutación: 1 = de cromosoma, 2 = de bit
+        // *******************************************************//
+
+        if (muta_expo)
+        {
+            // pmuta = (gamma_ini/cromsize)*pow( pow( ( (gamma_fin/cromsize) / (gamma_ini/cromsize) ), (double) (1.0/maxgen)) , (double) AlgGen.gen );  // divido por cromsize despues, segun que tipo de mutacion utilizo             
+            pmuta = gamma_ini*pow( pow( ( gamma_fin / gamma_ini ), (double) (1.0/maxgen)) , (double) AlgGen.gen );
+            // cout << endl << endl << pmuta << endl << endl;
+        }
+            
+        if (muta_amorti)
+        {        
+            t_am = ((double) AlgGen.gen) / maxgen;
+            y_am = A_am*pmuta*sin(2*M_PI*f_am*t_am+phi_am);        
+            pmuta = y_am+pmuta; 
+        }  
+        
+        AlgGen.gen = AlgGen.gen + 1;            
+        AlgGen.generacion(brecha, tselec, tmuta, pmuta, nproc);
+        
+        if ((Nsubpobs>0) && (tamSubPob>0) && (NGenSubPob>0)) {
+             if (ngs >= nGenSinSubpob) {
+                 AlgGen.EvoSubPobs(brecha, tselec, tmuta, pmuta, nproc, Nsubpobs, tamSubPob, NGenSubPob, cfg_settings);
+                 ngs = 1;
+             }             
+        }    
+
+        result = AlgGen.resultados(AlgGen.pobnueva);
+        
+        // se controla desde SETTINGS con parametro steady
+        if (last_max == result.maxfitness)
+        {  
+               count = count + 1; 
+            
+        } else 
+        {  
+               count = 0; 
+        }
+        
+        AlgGen.ImprimirGen(AlgGen.gen, result.maxfitness, result.minfitness, result.prom, AlgGen.pobnueva);
+        
+        last_max = result.maxfitness;
+
+        AlgGen.pobvieja = AlgGen.pobnueva;
+        
+        //--------------------
+        // ACTUALIZO MEDIDAS
+        //--------------------
+
+        MEASURES.Update(AlgGen.pobvieja, AlgGen.gen);         
+        MEASURES.Save(filename, SETTINGS);
+
+         
+    } while ((AlgGen.gen < AlgGen.maxgen) & (count<( (short) AlgGen.maxgen* (((float) steady) / 100)) ));
+      
+    AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom);
+    
+    
+    /*
+    for (int r=0;r<AlgGen.tampob; r++)
+        cout << AlgGen.pobnueva.individuos[r].aptitud[0] << "\t";
+    cout << endl;
+    
+    for (int r=0;r<AlgGen.tampob; r++)
+        cout << AlgGen.pobnueva.individuos[r].aptitud[1] << "\t";
+    cout << endl;
+    
+    for (int r=0;r<AlgGen.tampob; r++)         
+        cout << AlgGen.pobnueva.individuos[r].Fitness << "\t";
+    cout << endl;     
+
+    for (int r=0;r<AlgGen.tampob; r++){
+        int ff=0;
+        for (int k=0;k<AlgGen.lcrom; k++)
+            if (AlgGen.pobnueva.individuos[r].crom[k]) ff++;
+        cout << ff << "\t";   
+    }    
+    cout << endl;
+    */
+
+
+    // hago el plot de la corrida
+    
+    cmd = "python3 Plot4MOELIGA.py ";
+    cmd.insert(cmd.length(), filename); 
+    system(cmd.c_str());
+    
+    // ejecuto el test con TODOS los cromosomas del Frente 
+
+    cmd = "./testsvm ";
+    cmd.insert(cmd.length(), " file "); 
+    cmd.insert(cmd.length(), AlgGen.crom_file); 
+    cmd.insert(cmd.length(), " cfg "); 
+    cmd.insert(cmd.length(), cfg_settings.c_str()); 
+    cmd.insert(cmd.length(), " > ");     
+    filename.replace(filename.find(".json"),5,".test");
+    cmd.insert(cmd.length(), filename); 
+    system(cmd.c_str());
+    
+    cmd = "cat ";
+    cmd.insert(cmd.length(), filename); 
+    system(cmd.c_str());
+
+    return 0;
+
+}
+//################################################
+// ------------- END MAIN FUNCTION --------------
+//################################################
