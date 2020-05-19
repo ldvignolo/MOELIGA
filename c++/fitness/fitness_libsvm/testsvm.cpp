@@ -364,49 +364,54 @@ void process_mem_usage(double& vm_usage, double& resident_set)
 
 
 
-
 void scale_data(unsigned Ncols)
 {
 
-     vector <double> vmin;
-     vector <double> vmax; 
+     /*
+     vector <double> vmin, vmax;      
+     for (unsigned k=0;k<Ncols;k++)
+     {
+        vmin.push_back(__DBL_MAX__);
+        vmax.push_back(__DBL_MIN__);
+        for (int i=0;i<trnD.l;i++)
+        {   
+            if (vmin[k]>trnD.x[i][k].value) vmin[k]=trnD.x[i][k].value;
+            if (vmax[k]<trnD.x[i][k].value) vmax[k]=trnD.x[i][k].value;            
+        }        
+     }
+     */
+     
+     vector <double> vmean, vstd;
+     for (unsigned k=0;k<Ncols;k++)
+     {
+         vmean.push_back(0.0);
+         for (int i=0;i<trnD.l;i++) vmean[k]=vmean[k]+trnD.x[i][k].value;
+     }
      
      for (unsigned k=0;k<Ncols;k++)
      {
-            vmin.push_back(__DBL_MAX__);
-	    vmax.push_back(__DBL_MIN__);
-	    for (int i=0;i<trnD.l;i++)
-	    {   
-		   if (vmin[k]>trnD.x[i][k].value) vmin[k]=trnD.x[i][k].value;
-		   if (vmax[k]<trnD.x[i][k].value) vmax[k]=trnD.x[i][k].value;
-		
-	    }    
-
+         vmean[k]=vmean[k]/trnD.l;
+         vstd.push_back(0.0);
+         for (int i=0;i<trnD.l;i++) vstd[k]=vstd[k]+pow(trnD.x[i][k].value - vmean[k],2.0);
      }
+     for (unsigned k=0;k<Ncols;k++)
+         for (int i=0;i<trnD.l;i++)
+             vstd[k]=sqrt(vstd[k]/trnD.l);
 
-     
      for (int i=0;i<trnD.l;i++)
-     {
-	    for (unsigned k=0;k<Ncols;k++)
-	    {   
-		   // trnD.x[i][k].value = ( (trnD.x[i][k].value - vmin[k]) - (vmax[k] - vmin[k])/2 )  / (vmax[k] - vmin[k]);
-	           trnD.x[i][k].value = 2.0*( (trnD.x[i][k].value - vmin[k]) / (vmax[k] - vmin[k]) - 0.5 );
-	    }    
-     }
+         for (unsigned k=0;k<Ncols;k++)
+             trnD.x[i][k].value = (trnD.x[i][k].value - vmean[k]) / vstd[k];
+             // trnD.x[i][k].value = ( (trnD.x[i][k].value - vmin[k]) - (vmax[k] - vmin[k])/2 )  / (vmax[k] - vmin[k]);
+             // trnD.x[i][k].value = 2.0*( (trnD.x[i][k].value - vmin[k]) / (vmax[k] - vmin[k]) - 0.5 );
+
      
      for (int i=0;i<tstD.l;i++)
-     {
-	    for (unsigned k=0;k<Ncols;k++)
-	    {   
-		   // tstD.x[i][k].value = ( (tstD.x[i][k].value - vmin[k]) - (vmax[k] - vmin[k])/2 )  / (vmax[k] - vmin[k]);
-	           tstD.x[i][k].value = 2.0*( (tstD.x[i][k].value - vmin[k]) / (vmax[k] - vmin[k])  - 0.5 );
-	    }    
-     }
-   
-     
+         for (unsigned k=0;k<Ncols;k++)
+             tstD.x[i][k].value = (tstD.x[i][k].value - vmean[k]) / vstd[k];             
+             // tstD.x[i][k].value = ( (tstD.x[i][k].value - vmin[k]) - (vmax[k] - vmin[k])/2 )  / (vmax[k] - vmin[k]);
+             // tstD.x[i][k].value = 2.0*( (tstD.x[i][k].value - vmin[k]) / (vmax[k] - vmin[k])  - 0.5 );
+
 }
-
-
 
 
 
