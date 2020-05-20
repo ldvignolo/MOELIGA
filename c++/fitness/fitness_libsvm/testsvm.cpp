@@ -395,7 +395,6 @@ void scale_data(unsigned Ncols)
          for (int i=0;i<trnD.l;i++) vstd[k]=vstd[k]+pow(trnD.x[i][k].value - vmean[k],2.0);
      }
      for (unsigned k=0;k<Ncols;k++)
-         for (int i=0;i<trnD.l;i++)
              vstd[k]=sqrt(vstd[k]/trnD.l);
 
      for (int i=0;i<trnD.l;i++)
