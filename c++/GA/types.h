@@ -24,6 +24,7 @@ class individuo
           unsigned rango; // moga rank
           double ncount;  // moga niche count
           vector < double > distancias; // moga
+          double mean_dist; 
           fit_vect aptitud;    // moga
           double Fitness;      // moga fitness
           double sFitness;     // moga shared fitness
@@ -55,32 +56,6 @@ class poblacion
              short Current_Front_Size;
 
 };
-
-
-
-
-/* una función para convertir interos a cadena de caracteres */
-
-char* itoa(int val, int base){
-
-	static char buf[32] = {0};
-
-	int i = 30;
-	
-	for(; val && i ; --i, val /= base)
-	
-		buf[i] = "0123456789abcdef"[val % base];
-	
-	return &buf[i+1];
-	
-}
-
-template <typename T> string tostr(const T& t) { 
-   ostringstream os; 
-   os<<t; 
-   return os.str(); 
-} 
-
 
 
 #endif

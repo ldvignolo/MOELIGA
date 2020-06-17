@@ -17,6 +17,7 @@ all:
 	$(MAKE) -C ./c++/fitness/fitness_libsvm/ all
 	mv ./c++/fitness/fitness_libsvm/fitsvm ./
 	mv ./c++/fitness/fitness_libsvm/testsvm ./
-	$(MAKE) -C ./c++/fitness/fitness_python/ all
-	mv ./c++/fitness/fitness_python/fitness ./
+	$(MAKE) -C ./c++/fitness/fitness_elm/ all
+	mv ./c++/fitness/fitness_elm/fitness ./
+	mv ./c++/fitness/fitness_elm/testelm ./
 

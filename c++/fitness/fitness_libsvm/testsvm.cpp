@@ -34,6 +34,7 @@
 
 
 #include "../../GA/types.h"
+#include "../../GA/utils.h"
 #include "../../configs/Toolbox.hpp"   // LECTURA DEL ARCHIVO DE CONFIGURACION
 
 //--------------------------------------
@@ -246,7 +247,7 @@ int main(int argc, char** argv)
     
     
 	int icrom=1;
-	if (argc < 2){
+	if (argc < 4){
 	  
 	  for (unsigned j=0;j<Nfeat;j++) feats.push_back(j);
       doTest();

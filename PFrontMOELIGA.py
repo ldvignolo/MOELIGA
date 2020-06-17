@@ -10,6 +10,7 @@ def getPFronts(filename):
     dict[3] = '::> Rank:'       
     dict[4] = '::> Objetivo 0:' 
     dict[5] = '::> Objetivo 1:' 
+    dict[6] = '::> Objetivo 2:'
 
     textfile = open(filename,'r')
 
@@ -42,9 +43,11 @@ def getPFronts(filename):
                 if eachkey == dict[4]:    
                     obj1 = float(aux2)
                 if eachkey == dict[5]:    
-                    obj2 = float(aux2)            
+                    obj2 = float(aux2)
+                if eachkey == dict[6]:    
+                    obj3 = float(aux2)                                
                     if ((rank == 1) and (prevind!=indiv)):                   # solo los individuos del 1er frente
-                        AUX.append([obj1,obj2])
+                        AUX.append([obj1,obj2,obj3])
                         rank = 0
                         prevind=indiv
                     

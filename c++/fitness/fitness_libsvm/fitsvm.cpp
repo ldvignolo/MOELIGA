@@ -37,6 +37,7 @@
 #include <mpi.h>
 
 #include "../../GA/types.h"
+#include "../../GA/utils.h"
 #include "../../configs/Toolbox.hpp"   // LECTURA DEL ARCHIVO DE CONFIGURACION
 
 //--------------------------------------
@@ -81,69 +82,75 @@ void process_mem_usage(double& vm_usage, double& resident_set);
 void scale_data(unsigned Ncols);
 void scale_data(unsigned Ncols, cromosoma crom);
 void make_partition(unsigned Nfeat);
+double distL1(svm_node *x, svm_node *y, int Nf);
+double distL1(svm_node *x, svm_node *y, vector <int> indF);
+double Rmeasure(struct svm_problem data, int Nf);
+double Rmeasure(struct svm_problem data, cromosoma crom);
+
+
 
 int main(int argc, char** argv)
 {
-	int nlcrom,lcrom = 4;   // valor para inicializar, recibo valor verdadero por MPI
-	                      
-	int id = atoi(argv[1]);
-	cromosoma cromovect;
-	vector <double> aptitud;
-	int i, ini_NObjectives=1, NObjectives; 
-	int params[2];
-	float seed=0;
-	short pobtype=0;
+    int nlcrom,lcrom = 4;   // valor para inicializar, recibo valor verdadero por MPI
+                          
+    int id = atoi(argv[1]);
+    cromosoma cromovect;
+    vector <double> aptitud;
+    int i, ini_NObjectives=1, NObjectives; 
+    int params[2];
+    float seed=0;
+    short pobtype=0;
 
-	int rank, size;
-	MPI_Init(&argc,&argv);
-	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-	MPI_Comm_size(MPI_COMM_WORLD,&size);
+    int rank, size;
+    MPI_Init(&argc,&argv);
+    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+    MPI_Comm_size(MPI_COMM_WORLD,&size);
 
-	MPI_Status status;
-	MPI_Comm parent_comm;
-	MPI_Comm_get_parent(&parent_comm);
+    MPI_Status status;
+    MPI_Comm parent_comm;
+    MPI_Comm_get_parent(&parent_comm);
 
-	int* cromo = (int*) malloc(lcrom * sizeof(int));
-	double* fit = (double*) malloc(ini_NObjectives * sizeof(double));
-	
-	cromo[0]=10;
+    int* cromo = (int*) malloc(lcrom * sizeof(int));
+    double* fit = (double*) malloc(ini_NObjectives * sizeof(double));
+    
+    cromo[0]=10;
         
-	//==================================
-	// LEVANTO ARCHIVO DE CONFIGURACION
-	//----------------------------------
-	
-	Dictionary SETTINGS(argv[2]);
+    //==================================
+    // LEVANTO ARCHIVO DE CONFIGURACION
+    //----------------------------------
+    
+    Dictionary SETTINGS(argv[2]);
 
-	string aux1 = "", aux2 = "";
-	aux1 = SETTINGS.get_str("trnfile");
-	trnfile=aux1.c_str();
-	aux2 = SETTINGS.get_str("tstfile");
-	tstfile=aux2.c_str();
-	
-	configs_trn = SETTINGS.get_str("configs_trn");
-	configs_tst = SETTINGS.get_str("configs_tst");       
+    string aux1 = "", aux2 = "";
+    aux1 = SETTINGS.get_str("trnfile");
+    trnfile=aux1.c_str();
+    aux2 = SETTINGS.get_str("tstfile");
+    tstfile=aux2.c_str();
+    
+    configs_trn = SETTINGS.get_str("configs_trn");
+    configs_tst = SETTINGS.get_str("configs_tst");       
     
     configs_trn.insert(configs_trn.begin(),' ');
     configs_trn.insert(configs_trn.end(),' ');
     configs_tst.insert(configs_tst.begin(),' ');
     configs_tst.insert(configs_tst.end(),' ');         
     
-	float ptrain = SETTINGS.get_dbl("ptrain");
+    float ptrain = SETTINGS.get_dbl("ptrain");
     unsigned ntest = SETTINGS.get_int("NTests");
     if (ntest<=0) ntest=1;
-	
-	if ( (ptrain<=0) || (ptrain>100) ) ptrain = 100;
-	
-	// configs_trn=" -s 0 -t 0 -q ";
-	// configs_tst=" -q ";                
-	// cout << "-> " << configs_trn << endl;
-	// cout << "-> " << configs_tst << endl;
+    
+    if ( (ptrain<=0) || (ptrain>100) ) ptrain = 100;
+    
+    // configs_trn=" -s 0 -t 0 -q ";
+    // configs_tst=" -q ";                
+    // cout << "-> " << configs_trn << endl;
+    // cout << "-> " << configs_tst << endl;
 
-	/*--------------------------------*/
+    /*--------------------------------*/
 
-	unsigned Nfeat;
-	ReadProblemArff(trnfile, Nfeat, trnD, &trn_space[0]);
-	ReadProblemArff(tstfile, Nfeat, tstD, &tst_space[0]);
+    unsigned Nfeat;
+    ReadProblemArff(trnfile, Nfeat, trnD, &trn_space[0]);
+    ReadProblemArff(tstfile, Nfeat, tstD, &tst_space[0]);
     
     /*--------------------------------------------------*/
     /*--------------------------------------------------*/
@@ -153,7 +160,7 @@ int main(int argc, char** argv)
     auxD.l  = trnD.l+tstD.l;
     aux_space = Malloc(struct svm_node,(Nfeat+1) * auxD.l); 
     unsigned kk = 0;
-
+ 
     for (int ii=0;ii<trnD.l;ii++){
         auxD.x[ii]  = &aux_space[kk];        
         for (unsigned jj=0;jj<Nfeat;jj++){
@@ -165,7 +172,7 @@ int main(int argc, char** argv)
         auxD.y[ii]  =  trnD.y[ii];
         kk++;
     }
-
+ 
     for (int ii=0;ii<tstD.l;ii++){
         auxD.x[trnD.l+ii]  = &aux_space[kk];        
         for (unsigned jj=0;jj<Nfeat;jj++){
@@ -177,32 +184,24 @@ int main(int argc, char** argv)
         auxD.y[trnD.l+ii]  =  tstD.y[ii];
         kk++;
     }    
-
+ 
     srand ( unsigned ( std::time(0) ) );
     
     /*--------------------------------------------------*/
     /*--------------------------------------------------*/
     
+    normalizar = SETTINGS.get_bool("Normalizar");  
+    data_shuffle = SETTINGS.get_bool("DataShuffle");  
      
-     normalizar = SETTINGS.get_bool("Normalizar");  
-     data_shuffle = SETTINGS.get_bool("DataShuffle");  
-      
-     // cout << "<-> " << rank <<" -> datos leidos " <<endl;
-     
-     /*cout << trnfile << endl;
-     cout << tstfile << endl;
-     cout << configs_trn << endl;
-     cout << configs_tst << endl;*/
-         
-     vector <string> cadena;
-     cadena = SplitWords(configs_trn);
-     int Xargc = cadena.size();
-     char** Xargv = Malloc(char*,Xargc);
-     for (int i=0;i<Xargc;i++){
-        Xargv[i] = Malloc(char,cadena[i].length());
-        strcpy(Xargv[i], cadena[i].c_str()); 
-     }
-     parse_command_line(Xargc, Xargv);
+    vector <string> cadena;
+    cadena = SplitWords(configs_trn);
+    int Xargc = cadena.size();
+    char** Xargv = Malloc(char*,Xargc);
+    for (int i=0;i<Xargc;i++){
+       Xargv[i] = Malloc(char,cadena[i].length());
+       strcpy(Xargv[i], cadena[i].c_str()); 
+    }
+    parse_command_line(Xargc, Xargv);
 
      
     MPI_Recv(params, 2, MPI_INTEGER, 0, id, parent_comm, &status);
@@ -255,10 +254,6 @@ int main(int argc, char** argv)
         }
         
     }
-    // cout << "-> todo leido"<< endl;
-    // lcrom=Nfeat;
-    // for (i=0;i<lcrom;i++) cromovect.push_back(true);
-    // aptitud = fitness(cromovect, lcrom, rank, seed, pobtype); 
     
     free(cromo);
     free(fit);
@@ -275,6 +270,104 @@ int main(int argc, char** argv)
 
 }
 
+
+
+
+
+double distL1(svm_node *x, svm_node *y, vector <int> indF)
+{
+    double dist = 0.0;
+    for (int i=0;i<indF.size();i++)
+        dist = dist + fabs(x[indF[i]].value-y[indF[i]].value);
+    dist = dist / indF.size();
+    
+    return dist;
+}
+
+double distL1(svm_node *x, svm_node *y, int Nf)
+{
+    double dist = 0.0;
+    for (int i=0;i<Nf;i++)
+        dist = dist + fabs(x[i].value-y[i].value);
+    dist = dist / Nf;
+    
+    return dist;
+}
+
+
+double Rmeasure(struct svm_problem data, cromosoma crom)
+{
+    vector <int> indF;
+    for (int i=0;i<crom.size();i++) 
+        if (crom[i]) indF.push_back(i);
+
+    int Nd = data.l;    
+    // int Nr = ceil(0.2*Nd);
+    int Nr = ceil(0.35*Nd);
+    
+    vector <int> indI;
+    
+    for (int i=0;i<Nd;i++) indI.push_back(i);
+    random_shuffle ( indI.begin(), indI.end() );
+    
+    double nmiss, nhit, dist, measure = 0.0;
+    
+    for (unsigned k=0;k<Nr;k++){
+        
+        nmiss = __DBL_MAX__;
+        nhit = __DBL_MAX__;        
+        for (unsigned j=0;j<Nd;j++){
+            if (j!=indI[k]) 
+            {                
+                dist = distL1(data.x[j], data.x[indI[k]], indF);
+                if (data.y[j] == data.y[indI[k]]) {
+                    if (dist < nhit) nhit = dist;                    
+                } else {
+                    if (dist < nmiss) nmiss = dist;                
+                }    
+            }
+        }
+        measure = measure - nhit + nmiss;        
+    }
+    measure = measure / Nr;
+    
+    return measure;
+}
+
+double Rmeasure(struct svm_problem data, int Nf)
+{
+
+    int Nd = data.l;    
+    int Nr = ceil(0.2*Nd);
+    
+    vector <int> indI;
+    
+    indI.resize(Nd);
+    for (int i=0;i<Nd;i++) indI[i]=i;
+    random_shuffle ( indI.begin(), indI.end() );
+    
+    double nmiss, nhit, dist, measure = 0.0;
+    for (unsigned k=0;k<Nr;k++){
+        
+        nmiss = DBL_MAX;
+        nhit = DBL_MAX;        
+        for (unsigned j=0;j<Nd;j++){
+            if (j!=indI[k]) 
+            {                
+                dist = distL1(data.x[j], data.x[indI[k]], Nf);
+                if (data.y[j] == data.y[indI[k]]) {
+                    if (dist < nhit) nhit = dist;
+                } else {
+                    if (dist < nmiss) nmiss = dist;                
+                }               
+            }
+        }
+        measure = measure - nhit + nmiss;        
+    }
+    measure = measure / Nr;
+    
+    return measure;
+}
 
 
 
@@ -329,6 +422,7 @@ void make_partition(unsigned Nfeat)
     }  
 
 }
+
 
 
 void scale_data(unsigned Ncols)
@@ -402,8 +496,8 @@ void scale_data(unsigned Ncols, cromosoma crom)
          vstd.push_back(0.0);
          for (int i=0;i<trnD.l;i++) vstd[k]=vstd[k]+pow(trnD.x[i][index[k]].value - vmean[k],2.0);
      }
-     for (unsigned k=0;k<NF;k++)
-             vstd[k]=sqrt(vstd[k]/trnD.l);
+     for (unsigned k=0;k<NF;k++)         
+             vstd[k]= sqrt(vstd[k]/trnD.l);
 
      for (int i=0;i<trnD.l;i++)
          for (unsigned k=0;k<NF;k++)
@@ -414,6 +508,42 @@ void scale_data(unsigned Ncols, cromosoma crom)
               tstD.x[i][index[k]].value = (tstD.x[i][index[k]].value - vmean[k]) / vstd[k];
 
 }
+
+
+/*
+void scale_data(unsigned Ncols, cromosoma crom)
+{
+   
+     vector <double> vmin, vmax;      
+     for (unsigned k=0;k<Ncols;k++)
+     {
+        vmin.push_back(__DBL_MAX__);
+        vmax.push_back(__DBL_MIN__);
+        for (int i=0;i<trnD.l;i++)
+        {   
+            if (vmin[k]>trnD.x[i][k].value) vmin[k]=trnD.x[i][k].value;
+            if (vmax[k]<trnD.x[i][k].value) vmax[k]=trnD.x[i][k].value;            
+        }        
+     }
+    
+     vector <int> index;
+     for (unsigned k=0;k<Ncols;k++)
+         if (crom[k]) index.push_back(k);
+     int NF = index.size();    
+     
+     for (int i=0;i<trnD.l;i++)
+         for (unsigned k=0;k<NF;k++)
+             trnD.x[i][index[k]].value = ( trnD.x[i][index[k]].value - (vmax[k] - vmin[k])/2 )  / (vmax[k] - vmin[k]); 
+   
+     for (int i=0;i<tstD.l;i++)
+         for (unsigned k=0;k<NF;k++)
+             tstD.x[i][index[k]].value = ( tstD.x[i][index[k]].value  - (vmax[k] - vmin[k])/2 )  / (vmax[k] - vmin[k]); 
+         
+
+}
+*/
+
+
 
 
 
@@ -484,13 +614,15 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
          if (crom[k])  CFeats++;
      }
      
+     for (short k=0; k<NObjectives; k++) aptitude[k] = 0.0;
+     
      if (CFeats==0){
       
         aptitude[1] = 1.0;        
         aptitude[0] = 0.0;
         
         if (NObjectives > 2)
-           aptitude[2] = 0.7*aptitude[0] + 0.3*aptitude[1];
+           aptitude[2] = 0.0;
              
         return aptitude;         
      }
@@ -503,10 +635,9 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      struct svm_node *trn_space_aux, *tst_space_aux;
      
      int j;          
-      
-     aptitude[0] = 0;
+     
      // unsigned ntest = 3;       // opcion para repetir train y test para promediar el UAR
-     double fit_aux;
+     double fit_aux, mR;
      for (unsigned jk=0;jk<ntest;jk++){        
          
          int idx, Ncols = CFeats+1;
@@ -580,8 +711,13 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
          fit_aux = test(configs_tst, tstD_aux, modelo, tst_labels);
          // cout << "-------> " << fit_aux << endl;
          aptitude[0] = aptitude[0] + fit_aux;
-         svm_free_and_destroy_model(&modelo); 
          
+         if (NObjectives > 2) {
+            mR = Rmeasure(tstD_aux, CFeats);         
+            aptitude[2] = aptitude[2] + mR;
+         }
+         
+         svm_free_and_destroy_model(&modelo);          
          free(trnD_aux.y);
          free(trn_space_aux);
          free(tstD_aux.y);
@@ -590,7 +726,8 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      }
      
      aptitude[0] = aptitude[0]/ntest;
-     
+     if (NObjectives > 2)
+         aptitude[2] = aptitude[2]/ntest;
      
      
      /************************************************************************************/
@@ -600,10 +737,11 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
         aptitude[1] = (double (Lcrom-CFeats))/Lcrom;
      else 
         aptitude[1] = 0;
-     
+     /*
      if (NObjectives > 2)
         aptitude[2] = 0.7*aptitude[0] + 0.3*aptitude[1];
-          
+     */
+     
      return aptitude;
      
 }
@@ -633,7 +771,7 @@ vector <string> SplitWords(string strString)
     }else{
       if (!wd){
         ws = i; 
-	we = i;
+    we = i;
         wd=true;
       } else we=i;        
     }
@@ -646,11 +784,11 @@ vector <string> SplitWords(string strString)
 
 struct svm_model* train(unsigned Nfeat, struct svm_problem datos)
 {
-	const char *error_msg=NULL;
+    const char *error_msg=NULL;
 
-	// struct svm_model *modelo=NULL;
-	struct svm_model *modelo = Malloc(svm_model,1);
-	
+    // struct svm_model *modelo=NULL;
+    struct svm_model *modelo = Malloc(svm_model,1);
+    
         if(param.kernel_type == PRECOMPUTED)
         for(int i=0;i<datos.l;i++)
         {
@@ -664,123 +802,124 @@ struct svm_model* train(unsigned Nfeat, struct svm_problem datos)
                 fprintf(stderr,"Wrong input format: sample_serial_number out of range\n");
                 exit(1);
             }
-        }	
+        }    
         
         if(param.gamma == 0 && Nfeat > 0)
               param.gamma = 1.0/Nfeat;
-	
-	error_msg = svm_check_parameter(&datos,&param);
+    
+    error_msg = svm_check_parameter(&datos,&param);
 
-	if(error_msg)
-	{
-		fprintf(stderr,"ERROR: %s\n",error_msg);
-		exit(1);
-	}        
+    if(error_msg)
+    {
+        fprintf(stderr,"ERROR: %s\n",error_msg);
+        exit(1);
+    }        
 
-	if(cross_validation)
-	{
-		do_cross_validation();
-	}
-	else
-	{
-		// modelo = svm_train(&datos,&param);
-	        svm_train2(&datos,&param,modelo);
-	}
-	
-	return(modelo);
+    if(cross_validation)
+    {
+        do_cross_validation();
+    }
+    else
+    {
+        // modelo = svm_train(&datos,&param);
+            svm_train2(&datos,&param,modelo);
+    }
+    
+    return(modelo);
 }
 
 
 
 double test(string configs, struct svm_problem datos, struct svm_model *modelo, vector <int> labels)
 {
-	
-	int nclass;
-	vector <string> cadena;
-	vector <int> pred_labels, classes;
-	cadena = SplitWords(configs);
-	
-	int Xargc = cadena.size();
-	char** Xargv = Malloc(char*,Xargc);
-	for (int i=0;i<Xargc;i++){
-	   Xargv[i] = Malloc(char,cadena[i].length());
-	   strcpy(Xargv[i], cadena[i].c_str()); 
-	}
+    
+    int nclass;
+    vector <string> cadena;
+    vector <int> pred_labels, classes;
+    cadena = SplitWords(configs);
+    
+    int Xargc = cadena.size();
+    char** Xargv = Malloc(char*,Xargc);
+    for (int i=0;i<Xargc;i++){
+       Xargv[i] = Malloc(char,cadena[i].length());
+       strcpy(Xargv[i], cadena[i].c_str()); 
+    }
 
-	int i,k;
-	// parse options
-	for(i=0;i<Xargc;i++)
-	{
-		if(Xargv[i][0] != '-') break;
-		++i;
-		switch(Xargv[i-1][1])
-		{
-			case 'b':
-				predict_probability = atoi(Xargv[i]);
-				break;
-			case 'q':
-				info = &print_null;
-				i--;
-				break;
-			default:
-				fprintf(stderr,"Unknown option: -%c\n", Xargv[i-1][1]);
-				exit_test_help();
-		}
-	}
+    int i,k;
+    // parse options
+    for(i=0;i<Xargc;i++)
+    {
+        if(Xargv[i][0] != '-') break;
+        ++i;
+        switch(Xargv[i-1][1])
+        {
+            case 'b':
+                predict_probability = atoi(Xargv[i]);
+                break;
+            case 'q':
+                info = &print_null;
+                i--;
+                break;
+            default:
+                fprintf(stderr,"Unknown option: -%c\n", Xargv[i-1][1]);
+                exit_test_help();
+        }
+    }
 
-	if(predict_probability)
-	{
-		if(svm_check_probability_model(modelo)==0)
-		{
-			fprintf(stderr,"Model does not support probabiliy estimates\n");
-			exit(1);
-		}
-	}
-	else
-	{
-		if(svm_check_probability_model(modelo)!=0)
-			info("Model supports probability estimates, but disabled in prediction.\n");
-	}
+    if(predict_probability)
+    {
+        if(svm_check_probability_model(modelo)==0)
+        {
+            fprintf(stderr,"Model does not support probabiliy estimates\n");
+            exit(1);
+        }
+    }
+    else
+    {
+        if(svm_check_probability_model(modelo)!=0)
+            info("Model supports probability estimates, but disabled in prediction.\n");
+    }
 
-	pred_labels = predict(datos, modelo);
+    pred_labels = predict(datos, modelo);
 
-	for (int i=0;i<Xargc;i++){
-	   free(Xargv[i]);
-	} free(Xargv);
-	
-	// calcular UAR con los vectores labels y pred_labels
+    for (int i=0;i<Xargc;i++){
+       free(Xargv[i]);
+    } free(Xargv);
+    
+    // calcular UAR con los vectores labels y pred_labels
 
-	vector <int> tmp;
-	bool neu;
-	for (i=0;i<(int)labels.size();i++){
-	  neu = true;     
-	  for (k=0;k<(int)tmp.size();k++)
-	      if (labels[i]==tmp[k]) { neu = false; break; }	    
-	  if (neu) tmp.push_back(labels[i]);
-	}
+    vector <int> tmp;
+    bool neu;
+    for (i=0;i<(int)labels.size();i++){
+      neu = true;     
+      for (k=0;k<(int)tmp.size();k++)
+          if (labels[i]==tmp[k]) { neu = false; break; }        
+      if (neu) tmp.push_back(labels[i]);
+    }
 
-	nclass = tmp.size();
-	int MC[nclass][nclass] = {{0}};
-	memset(MC,0,nclass*nclass*sizeof(int));
-	  
-	for (i=0;i<(int)labels.size();i++)
-	       MC[ labels[i]-1 ][ pred_labels[i]-1 ]++;
+    nclass = tmp.size();
+    int MC[nclass][nclass] = {{0}};
+    memset(MC,0,nclass*nclass*sizeof(int));
+      
+    for (i=0;i<(int)labels.size();i++)
+           MC[ labels[i]-1 ][ pred_labels[i]-1 ]++;
 
-	double rr, UAR=0;
-	for (i=0;i<nclass;i++){
-	   rr = 0;
-	   for (k=0;k<nclass;k++)
-	       rr = rr + MC[ i ][ k ];
-	   UAR = UAR + MC[ i ][ i ]/rr;
-	}
-	UAR = UAR/nclass;
-	
-	/* for (i=0;i<nclass;i++){
-	     for (k=0;k<nclass;k++)
-	       cout << MC[ i ][ k ] << " ";
-	     cout << "\n"; }
-	   cout << ">>UAR: " << UAR << endl;  */
-		
-	return(UAR);
+    double rr, UAR=0;
+    for (i=0;i<nclass;i++){
+       rr = 0;
+       for (k=0;k<nclass;k++)
+           rr = rr + MC[ i ][ k ];
+       UAR = UAR + MC[ i ][ i ]/rr;
+    }
+    UAR = UAR/nclass;
+    
+    /* for (i=0;i<nclass;i++){
+         for (k=0;k<nclass;k++)
+           cout << MC[ i ][ k ] << " ";
+         cout << "\n"; }
+       cout << ">>UAR: " << UAR << endl;  
+    */
+    
+    return(UAR);
 }
 
