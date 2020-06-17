@@ -1,0 +1,52 @@
+
+
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+
+using namespace std;
+
+
+
+/* una función para convertir interos a cadena de caracteres */
+
+char* itoa(int val, int base){
+
+	static char buf[32] = {0};
+
+	int i = 30;
+	
+	for(; val && i ; --i, val /= base)
+	
+		buf[i] = "0123456789abcdef"[val % base];
+	
+	return &buf[i+1];
+	
+}
+
+template <typename T> string tostr(const T& t) { 
+   ostringstream os; 
+   os<<t; 
+   return os.str(); 
+} 
+
+
+
+// Case Insensitive String Comparision 
+bool compareChar(char & c1, char & c2)
+{
+    if (c1 == c2)
+        return true;
+    else if (std::toupper(c1) == std::toupper(c2))
+        return true;
+    return false;
+}
+bool caseInSensStringCompare(std::string & str1, std::string &str2)
+{
+    return ( (str1.size() == str2.size() ) &&
+             std::equal(str1.begin(), str1.end(), str2.begin(), &compareChar) );
+}
+
+
+
+
