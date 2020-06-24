@@ -45,7 +45,7 @@
 #include "svm-train.c"
 #include "svm-predict.c"
 #include "arffread.c"
-#include "SLFN/elm.cpp"
+#include "../SLFN/elm.cpp"
 
 //--------------------------------------
 

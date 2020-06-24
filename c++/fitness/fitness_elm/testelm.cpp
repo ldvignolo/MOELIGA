@@ -46,7 +46,7 @@
 #include <errno.h>
 #include "arffread.c"
 #include "../libsvm-3.20/svm.h"
-#include "SLFN/elm.cpp"
+#include "../SLFN/elm.cpp"
 
 //--------------------------------------
 
@@ -82,8 +82,6 @@ t_elm_par elm_params;
 
 vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short pobtype, double alpha, double beta, int NObjectives);
 vector <string> SplitWords(string strString);
-struct svm_model* train(unsigned Nfeat, struct svm_problem datos);
-double test(string configs, struct svm_problem datos, struct svm_model *modelo, vector <int> labels);
 void process_mem_usage(double& vm_usage, double& resident_set);
 void scale_data(unsigned Ncols);
 double elm(struct svm_problem trn_data, struct svm_problem tst_data, int Nfeats, int elm_nhn, double elm_rf, bool multi, int max_nhn);
