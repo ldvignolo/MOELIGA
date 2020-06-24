@@ -81,24 +81,6 @@ void process_mem_usage(double& vm_usage, double& resident_set);
 void scale_data(unsigned Ncols);
 
 
-
-/*================================
-  FUNCIONES Y DEFINICIONES UTILES
-  ================================*/
-stack<clock_t> tictoc_stack;
-
-void tic() {
-    tictoc_stack.push(clock());
-}
-
-void toc() {
-    cout << "Time elapsed: "
-              << ((double)(clock() - tictoc_stack.top())) / CLOCKS_PER_SEC
-              << endl << endl;
-    tictoc_stack.pop();
-}
-
-
 int main(int argc, char** argv)
 {
     cromosoma cromovect;

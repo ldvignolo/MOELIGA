@@ -3,9 +3,16 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <stack>
+#include <ctime>
+#include <fstream>
+#include <string>
 
 using namespace std;
 
+/*================================
+  FUNCIONES Y DEFINICIONES UTILES
+  ================================*/
 
 
 /* una función para convertir interos a cadena de caracteres */
@@ -47,6 +54,41 @@ bool caseInSensStringCompare(std::string & str1, std::string &str2)
              std::equal(str1.begin(), str1.end(), str2.begin(), &compareChar) );
 }
 
+
+stack<clock_t> tictoc_stack;
+
+void tic() {
+    tictoc_stack.push(clock());
+}
+
+void toc() {
+    cout << "Time elapsed: "
+              << ((double)(clock() - tictoc_stack.top())) / CLOCKS_PER_SEC
+              << endl;
+    tictoc_stack.pop();
+}
+
+
+stack<clock_t> global_tictoc_stack;
+
+void global_tic() {
+    global_tictoc_stack.push(clock());
+}
+
+double global_toc() {
+    
+    double elapsed;
+    
+    cout << "TOTAL Time elapsed: "
+              << ((double)(clock() - global_tictoc_stack.top())) / CLOCKS_PER_SEC
+              << endl;
+    
+    elapsed = ((double)(clock() - global_tictoc_stack.top())) / CLOCKS_PER_SEC;
+              
+    global_tictoc_stack.pop();
+    
+    return elapsed;
+}
 
 
 

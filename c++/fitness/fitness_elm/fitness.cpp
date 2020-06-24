@@ -80,7 +80,7 @@ struct t_elm_par{
 t_elm_par elm_params;
 
 
-vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short pobtype, int NObjectives, float ptrain, unsigned ntest);
+vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short pobtype, int NObjectives, float ptrain, unsigned ntest, bool c_eval);
 vector <string> SplitWords(string strString);
 struct svm_model* train(unsigned Nfeat, struct svm_problem datos);
 double test(string configs, struct svm_problem datos, struct svm_model *modelo, vector <int> labels);
@@ -103,9 +103,10 @@ int main(int argc, char** argv)
     cromosoma cromovect;
     vector <double> aptitud;
     int i, ini_NObjectives=1, NObjectives; 
-    int params[2];
+    int params[3];
     float seed=0;
     short pobtype=0;
+    bool c_eval=true;
 
     int rank, size;
     MPI_Init(&argc,&argv);
@@ -223,7 +224,7 @@ int main(int argc, char** argv)
     }
     parse_command_line(Xargc, Xargv);
      
-    MPI_Recv(params, 2, MPI_INTEGER, 0, id, parent_comm, &status);
+    // MPI_Recv(params, 2, MPI_INTEGER, 0, id, parent_comm, &status);
     MPI_Recv(&seed, 1, MPI_FLOAT, 0, id, parent_comm, &status);
     MPI_Recv(&NObjectives, 1, MPI_INTEGER, 0, id, parent_comm, &status);     
     
@@ -237,9 +238,12 @@ int main(int argc, char** argv)
     while (cromo[0]!=-5)
     {       
         cc++;
+        
+        MPI_Recv(params, 3, MPI_INTEGER, 0, id, parent_comm, &status);
 
-        nlcrom = params[0];
+        nlcrom  = params[0];
         pobtype = params[1];
+        c_eval  = params[2]!=0; 
         
         if (nlcrom!=lcrom){
             lcrom = nlcrom;
@@ -264,7 +268,7 @@ int main(int argc, char** argv)
                  cromovect.push_back(false);
            }
         
-           aptitud = fitness(cromovect, lcrom, rank, seed, pobtype, NObjectives, ptrain, ntest); 
+           aptitud = fitness(cromovect, lcrom, rank, seed, pobtype, NObjectives, ptrain, ntest, c_eval); 
            
            for (i=0;i<NObjectives;i++) fit[i] = aptitud[i];
            MPI_Send(fit, NObjectives, MPI_DOUBLE, 0, id, parent_comm);
@@ -567,7 +571,7 @@ void process_mem_usage(double& vm_usage, double& resident_set)
 
 
 
-vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short pobtype, int NObjectives, float ptrain, unsigned ntest)
+vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short pobtype, int NObjectives, float ptrain, unsigned ntest, bool c_eval)
 {
      string cadena, cadena1, aux;
      vector <double> aptitude;
@@ -615,7 +619,6 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      
      int j;          
      
-     // unsigned ntest = 3;       // opcion para repetir train y test para promediar el UAR
      double fit_aux, mR;
      for (unsigned jk=0;jk<ntest;jk++){        
          
@@ -686,15 +689,20 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
              j++;
          }
          
-         if (caseInSensStringCompare(clasificador, str_svm)) {
-         
-             modelo = train(CFeats, trnD_aux);
-             fit_aux = test(configs_tst, tstD_aux, modelo, tst_labels);
-             
-         } else if (caseInSensStringCompare(clasificador, str_elm)) {
-         
-             fit_aux = elm(trnD_aux, tstD_aux, CFeats, elm_params.nhn, elm_params.rf, elm_params.multi, elm_params.nhn_max);
-         }
+         if (c_eval) 
+         {
+            if (caseInSensStringCompare(clasificador, str_svm)) {
+            
+                modelo = train(CFeats, trnD_aux);
+                fit_aux = test(configs_tst, tstD_aux, modelo, tst_labels);                
+                svm_free_and_destroy_model(&modelo);  
+                
+            } else if (caseInSensStringCompare(clasificador, str_elm)) {
+            
+                fit_aux = elm(trnD_aux, tstD_aux, CFeats, elm_params.nhn, elm_params.rf, elm_params.multi, elm_params.nhn_max);
+            }
+            
+         } else fit_aux = 0.0;
          
          aptitude[0] = aptitude[0] + fit_aux;
          
@@ -702,8 +710,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
             mR = Rmeasure(tstD_aux, CFeats);         
             aptitude[2] = aptitude[2] + mR;
          }
-         
-         svm_free_and_destroy_model(&modelo);          
+                 
          free(trnD_aux.y);
          free(trn_space_aux);
          free(tstD_aux.y);
@@ -714,19 +721,12 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      aptitude[0] = aptitude[0]/ntest;
      if (NObjectives > 2)
          aptitude[2] = aptitude[2]/ntest;
-     
-     
-     /************************************************************************************/
-
        
      if (Lcrom!=0)
         aptitude[1] = (double (Lcrom-CFeats))/Lcrom;
      else 
         aptitude[1] = 0;
-     /*
-     if (NObjectives > 2)
-        aptitude[2] = 0.7*aptitude[0] + 0.3*aptitude[1];
-     */
+
      
      return aptitude;
      

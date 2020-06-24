@@ -34,6 +34,7 @@
 
 
 #include "../../GA/types.h"
+#include "../../GA/utils.h"
 #include "../../configs/Toolbox.hpp"   // LECTURA DEL ARCHIVO DE CONFIGURACION
 
 //--------------------------------------
@@ -88,21 +89,6 @@ void scale_data(unsigned Ncols);
 double elm(struct svm_problem trn_data, struct svm_problem tst_data, int Nfeats, int elm_nhn, double elm_rf, bool multi, int max_nhn);
 
 
-/*================================
-  FUNCIONES Y DEFINICIONES UTILES
-  ================================*/
-stack<clock_t> tictoc_stack;
-
-void tic() {
-    tictoc_stack.push(clock());
-}
-
-void toc() {
-    cout << "Time elapsed: "
-              << ((double)(clock() - tictoc_stack.top())) / CLOCKS_PER_SEC
-              << endl << endl;
-    tictoc_stack.pop();
-}
 
 
 int main(int argc, char** argv)

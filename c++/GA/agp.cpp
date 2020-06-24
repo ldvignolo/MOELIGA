@@ -19,11 +19,12 @@
 //
 //----------------------------------------------------------------------------
 
+
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include <cstring>
 #include <fstream>
+#include <cstring>
 #include <sstream>
 #include <cmath>
 #include <float.h>
@@ -55,23 +56,6 @@ const int maxpob = 20000;
 const int maxstring = 300;
 
 
-/*================================
-  FUNCIONES Y DEFINICIONES UTILES
-  ================================*/
-stack<clock_t> tictoc_stack;
-
-void tic() {
-    tictoc_stack.push(clock());
-}
-
-void toc() {
-    cout << "Time elapsed: "
-              << ((double)(clock() - tictoc_stack.top())) / CLOCKS_PER_SEC
-              << endl;
-    tictoc_stack.pop();
-}
-
-
 
 /*==================================
   DEFINICION DEL ALGORITMO GENETICO
@@ -82,33 +66,32 @@ class AG {
 private:
        double pcruza, pmutacion;          // PROBABILIDADES DE CRUZA Y MUTACION
        double prom, max, min;             // GUARDO ESTADISTICAS SOBRE FITNESS PARA MOSTRAR
-       ofstream results;                  // ARCHIVO DE TEXTO DE RESULTADOS
        MPI_Comm everyone;                 // VARIABLE DE MPI
        float activ_rate;                  // TASA DE ACTIVACIONES PARA INICALIZACION
        fit_vect aptitud_min, aptitud_max; // minimo y maximo historico observado para cada objetivo
-       
+       std::ofstream results;             // ARCHIVO DE TEXTO DE RESULTADOS
        std::default_random_engine generator;       
 
 public:
   
-       int nObjctvs;          // CANTIDAD DE OBJETIVOS  (no uso short porque se manda por mpi como int)
-       short maxgen;          // NUMERO MAXIMO DE GENERACIONES
-       short gen;             // GENERACION ACTUAL              
-       short nsubpob;         // CANTIDAD DE SUBPOBLACIONES       
+       int nObjctvs;                      // CANTIDAD DE OBJETIVOS  (no uso short porque se manda por mpi como int)
+       short maxgen;                      // NUMERO MAXIMO DE GENERACIONES
+       short gen;                         // GENERACION ACTUAL              
+       short nsubpob;                     // CANTIDAD DE SUBPOBLACIONES       
        short Elite;
-       short dist_opt;        // medida de distancia para fitness sharing: 0-'variable space', 1-'objective space'
+       short dist_opt;                    // medida de distancia para fitness sharing: 0-'variable space', 1-'objective space'
        double alfa;
        double sigma_share, alfa_share;
-       string string_aux_filename = "";
+       string string_aux_filename = "";       
        
-       poblacion pobvieja;   // POBLACION EN LA GENERACION ACTUAL
-       poblacion pobnueva;   // POBLACION DE LA SIGUIENTE GENERACION
-      
-       string fecha;        // FECHA ACTUAL
-       string slvbin;       // Nombre del ejecutvable fitness
-       string res_file;     // nombre de archivo TXT de resultados
-       string crom_file;    // nombre de archivo TXT de los mejores cromosomas (frente Pareto)
-       string folder;       // directorio para los archivos de resultados
+       poblacion pobvieja;                // POBLACION EN LA GENERACION ACTUAL
+       poblacion pobnueva;                // POBLACION DE LA SIGUIENTE GENERACION
+                                          
+       string fecha;                      // FECHA ACTUAL
+       string slvbin;                     // Nombre del ejecutvable fitness
+       string res_file;                   // nombre de archivo TXT de resultados
+       string crom_file;                  // nombre de archivo TXT de los mejores cromosomas (frente Pareto)
+       string folder;                     // directorio para los archivos de resultados
        
        
        /*-----------------
@@ -142,7 +125,7 @@ public:
        
        
        // GENERARAR LA SIGUIENTE SUBPOBLACION
-       poblacion generSubPob(poblacion &SubPob, int brecha, int seltype, int mutatype, float pmuta, int nproc, float imax, short subgen);
+       poblacion generSubPob(poblacion &SubPob, int brecha, int seltype, int mutatype, float pmuta, int nproc, float imax, short subgen, short maxsubgen, string T_reemplazo, bool sp_c_eval);
        
        
        // GENERAR y EVOLUCIONAR SUBPOBLACION
@@ -418,14 +401,15 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
     double *pointApt;
     int map[nproc];
     int tag;
-    int params[2];
+    int params[3];
     unsigned nf;
 
     /*---------------------------------------------*/
 
-    seed = 5;          // aca no utilizo la semilla
-    params[0] = pobvieja.lcrom; // cambia segun pob principal o subpob 
-    params[1] = 1;     // 1 indica pob principal; 2 indica subpob
+    seed = 5;                    // aca no utilizo la semilla
+    params[0] = pobvieja.lcrom;  
+    params[1] = 0;               // 0 indica pob principal; 1 indica subpob
+    params[2] = 1;               // indica si se debe usar el clasificador para evaluar
     
    // repartir calculos de aptitud entre nodos
     
@@ -440,6 +424,7 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
            if  (!busys[i])
            {
                map[i]=j;
+               MPI_Send(params, 3, MPI_INTEGER, i, tag, everyone);
                for (k=0;k<pobvieja.lcrom;k++)
                   if (pobnueva.individuos[j].crom[k]) buffer[k] = 1; else buffer[k] = 0;
                MPI_Send(buffer, pobvieja.lcrom, MPI_INTEGER, i, tag, everyone);
@@ -487,12 +472,6 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
        }
     }
 
-    /*
-    for (j=0;j<pobvieja.tampob;j++){
-       nf = Verificar(&pobnueva.individuos[j]);
-       cout << ">> gen " << gen <<  " indiv " << j << " aptitud 1: " << pobnueva.individuos[j].aptitud[1]  << " | " << 1 -((float) nf)/pobvieja.lcrom  << " | " << nf << "  ||  " << (0.000001<abs(pobnueva.individuos[j].aptitud[1]  -  (1 -((float) nf)/pobvieja.lcrom)))  <<  endl;    
-    } 
-    */
    
     CalcularFitness(pobnueva);
 
@@ -687,10 +666,12 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
     individuo borrador;
     short eraser;
     vector <short> indice;
+    bool sp_c_eval = true;
     
     Dictionary SETTINGS(cfg_settings.c_str());
      
     string T_reemplazo = SETTINGS.get_str("SubPob_Replace_Type");
+    sp_c_eval = SETTINGS.get_bool("SP_Classifier_Evaluation");
 
     for (j=0;j<pobnueva.tampob;j++) indice.push_back(j);    
     // ordenamiento de la población
@@ -810,28 +791,26 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
         auxfit = 0;
         c = 0;
         elegido = subpob[j].individuos[0];
-        for (int g=0;g<NGenSubPob && c<=(NGenSubPob/10);g++){
+        for (int g=0; g<NGenSubPob; g++){
 
+            cout << "Generacion " << gen << ", SubPob "<< j+1 << ", Generacion SubPob " << g+1 << endl;            
             tic();
             
-            subpob[j] = generSubPob(subpob[j], brecha, seltype, mutatype, pmuta, nproc, imax, g);
+            if (c>(NGenSubPob/10)) g = NGenSubPob;
+            
+            subpob[j] = generSubPob(subpob[j], brecha, seltype, mutatype, pmuta, nproc, imax, g, NGenSubPob, T_reemplazo, sp_c_eval);
             elegido = subpob[j].individuos[0];
 
-            // cout << "> > > SubPob : Generacion " << j << " : "<< g << endl;
             toc();
 
-            if (auxfit < elegido.aptitud[0])
+            if (auxfit < elegido.Fitness)
             {
-               auxfit = elegido.aptitud[0];               
+               auxfit = elegido.Fitness;               
                c = 0;
 
             } else c = c + 1;
             
-            cout << "Generacion " << gen << ", SubPob "<< j+1 << ", Generacion SubPob " << g+1 << endl;
-            
         }
-        if ((j+1)<Nsubpobs)
-        
         
         if ((T_reemplazo.compare("reemplazo_padre") == 0)||(T_reemplazo.compare("None") == 0)) {
             // reemplazo solo el padre de la subpob si su fitness es mejorado
@@ -841,7 +820,10 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
             // if (elegido.Fitness >= pobnueva.individuos[elegidos[j]].Fitness){   ->> no es comparable un Fitness de la pob general con uno de subpob
             
             replace_flag = true;
-            for (k=0;k<nObjctvs;k++)
+            
+            short nObj;
+            if (nObjctvs>=2) nObj=2;  
+            for (k=0;k<nObj;k++)                
                 if (elegido.aptitud[k] < pobnueva.individuos[elegidos[j]].aptitud[k]) replace_flag = false;
             
             if (replace_flag){                
@@ -932,14 +914,14 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
 
 // realiza una generacion de una subpoblacion
 //===================================================================
-poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutatype, float pmutaSP, int nproc, float imax, short subgen)
+poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutatype, float pmutaSP, int nproc, float imax, short subgen, short maxsubgen, string T_reemplazo, bool sp_c_eval)
 {
     int i, k, j, mate1, mate2, aux;
     float acum, seed;
     int punto, bc = 1;
     poblacion subpobnueva;
     double sumaptitud = 0;
-
+    
     // Inicializacion subpob auxiliar
     subpobnueva.individuos.resize(SubPob.tampob);
     subpobnueva.lcrom = SubPob.lcrom;
@@ -1038,14 +1020,20 @@ poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutaty
     double aptitud[nproc][nObjctvs];
     int map[nproc];
     int tag;
-    int params[2];
+    int params[3];
     unsigned nf;
 
     /*---------------------------------------------*/
 
     seed = 5;            // aca no utilizo la semilla
     params[0] = pobnueva.lcrom;  
-    params[1] = 2;       // 1 indica pob principal; 2 indica subpob
+    params[1] = 1;       // 0 indica pob principal; 1 indica subpob
+    params[2] = 0;       // indica si se debe usar el clasificador para evaluar
+    if (sp_c_eval) params[2] = 1;
+    
+    if (T_reemplazo.compare("reemplazo_completo") == 0)
+        if (subgen == maxsubgen)
+            params[2] = 1;     // con reemplazo completo en la ultima generacion evaluo a todos con clasificador 
     
     // repartir cálculos de aptitud entre nodos
     for (i=0;i<nproc;i++) busys[i] = false;
@@ -1060,16 +1048,16 @@ poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutaty
        {
            if  (!busys[i])
            {
+               MPI_Send(params, 3, MPI_INTEGER, i, tag, everyone);        
                /*
-               MPI_Send(params, 2, MPI_INTEGER, i, tag, everyone);
                MPI_Send(&seed, 1, MPI_FLOAT, i, tag, everyone);  
                MPI_Send(&nObjctvs, 1, MPI_INTEGER, i, tag, everyone);
                */
        
                map[i]=j;
                for (k=0;k<pobnueva.lcrom;k++) buffer[k] = 0;
-               for (k=0;k<subpobnueva.lcrom;k++){
-                  
+               for (k=0;k<subpobnueva.lcrom;k++)
+               {                  
                   if (subpobnueva.individuos[j].crom[k]) buffer[subpobnueva.individuos[j].index[k]] = 1;
                }  
                
@@ -1159,7 +1147,38 @@ poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutaty
       k++;
     }  while (desorden);
 
-    SubPob = subpobnueva;    
+    
+    // ----------------------------
+    
+    if ((!sp_c_eval)&&((T_reemplazo.compare("reemplazo_padre") == 0)||(T_reemplazo.compare("None") == 0))&&(subgen == maxsubgen)) 
+    {  
+       // con reemplazo_padre evaluo el mejor indidividuo (j=0) con el clasificador en la ultima generacion       
+       params[2] = 1; 
+       j = 0; 
+       nf = Verificar(&subpobnueva.individuos[j]);
+
+       MPI_Send(params, 3, MPI_INTEGER, 0, tag, everyone);        
+       for (k=0;k<pobnueva.lcrom;k++) buffer[k] = 0;
+       for (k=0;k<subpobnueva.lcrom;k++)
+       {                  
+           if (subpobnueva.individuos[j].crom[k]) buffer[subpobnueva.individuos[j].index[k]] = 1;
+       }  
+       MPI_Send(buffer, pobnueva.lcrom, MPI_INTEGER, 0, tag, everyone);
+       MPI_Irecv(&aptitud[0], nObjctvs, MPI_DOUBLE, 0, tag, everyone, &request[0]);
+       flag = 0;
+       while (flag!=1) MPI_Test(&request[0],&flag,&status);
+       if (flag == 1)
+       {
+           for (int ij=0;ij<nObjctvs;ij++)
+           {    
+               subpobnueva.individuos[j].aptitud[ij] = aptitud[0][ij];
+           }    
+       }
+    }
+
+    // ----------------------------
+    
+    SubPob = subpobnueva;
     
     return(SubPob);
   
@@ -1262,7 +1281,7 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
      double acum=0, *pointApt;
      int tag;
      char *arg[3];
-     int params[2];
+     int params[3];
      unsigned nf;
 
      /*--------------------------------------------*/
@@ -1281,11 +1300,12 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
      MPI_Comm_spawn((char*) slvbin.c_str(), arg, nproc, MPI_INFO_NULL, 0, MPI_COMM_SELF, &everyone, MPI_ERRCODES_IGNORE);
 
      params[0] = pobvieja.lcrom;  
-     params[1] = 50;  // no utilizo esta variable
+     params[1] = 0;  // indica tipo de poblacion
+     params[2] = 1;  // indica si debe usar clasificador para evaluar
 
      for (i=0;i<nproc;i++)
      {
-         MPI_Send(params, 2, MPI_INTEGER, i, tag, everyone);
+         // MPI_Send(params, 2, MPI_INTEGER, i, tag, everyone);
          MPI_Send(&alfa, 1, MPI_FLOAT, i, tag, everyone);  
          MPI_Send(&nObjctvs, 1, MPI_INTEGER, i, tag, everyone);
      }
@@ -1305,6 +1325,7 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
             
              if  (!busys[i])
              {
+                 MPI_Send(params, 3, MPI_INTEGER, i, tag, everyone);
                  map[i]=j;
                  for (k=0;k<pobvieja.lcrom;k++)
                     if (pobvieja.individuos[j].crom[k]) buffer[k] = 1; else buffer[k] = 0;
@@ -1829,21 +1850,31 @@ void AG::ImprimirGen(int generac, double maxfitness, double minfitness, double p
 void AG::Terminar(int nproc, int lcrom)
 {
       int buffer[lcrom];
-      int params[2];
+      int params[3];
       float seed = 5;
       int tag = 1000+nproc;
       
       buffer[0]=-5; // señal para matar todos los procesos creados
       params[0]=lcrom;
-      params[1]=1;
+      params[1]=0;
+      params[2]=1;
       
       for (int i=0;i<nproc;i++)
       { 
-          // MPI_Send(params, 2, MPI_INTEGER, i, tag, everyone);
+          MPI_Send(params, 3, MPI_INTEGER, i, tag, everyone);
           // MPI_Send(&seed, 1, MPI_FLOAT, i, tag, everyone);  
           // MPI_Send(&nObjctvs, 1, MPI_INTEGER, i, tag, everyone);
           MPI_Send(buffer, lcrom, MPI_INTEGER, i, tag, everyone);
       }
+      
+      double total_elapsed = global_toc(); 
+      
+      string filename = res_file;
+      if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);
+      
+      results << " " << endl;
+      results << "TOTAL Time elapsed: " << total_elapsed << endl;
+      results << " " << endl;
       
       if (results.is_open()) results.close();
       
@@ -2089,6 +2120,7 @@ int main(int argc, char** argv)
 
     /*--------------------------------------------*/
 
+    global_tic();
     
     // INICIALIZACION DEL ALGORITMO GENETICO
     AlgGen.inicializar(popsize, cromsize , maxgen, pcruza, pmuta, nproc, tasa_activ, cfg_settings);
@@ -2161,7 +2193,8 @@ int main(int argc, char** argv)
 
          
     } while ((AlgGen.gen < AlgGen.maxgen) & (count<( (short) AlgGen.maxgen* (((float) steady) / 100)) ));
-      
+
+    
     AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom);
     
     if (onlyBest) AlgGen.ImprimirFrente(AlgGen.pobnueva, AlgGen.gen, 1.0, true);
