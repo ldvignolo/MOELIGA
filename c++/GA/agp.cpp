@@ -1032,7 +1032,7 @@ poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutaty
     if (sp_c_eval) params[2] = 1;
     
     if (T_reemplazo.compare("reemplazo_completo") == 0)
-        if (subgen == maxsubgen)
+        if (subgen >= (maxsubgen-1))
             params[2] = 1;     // con reemplazo completo en la ultima generacion evaluo a todos con clasificador 
     
     // repartir cálculos de aptitud entre nodos
@@ -1150,7 +1150,7 @@ poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutaty
     
     // ----------------------------
     
-    if ((!sp_c_eval)&&((T_reemplazo.compare("reemplazo_padre") == 0)||(T_reemplazo.compare("None") == 0))&&(subgen == maxsubgen)) 
+    if ((!sp_c_eval)&&((T_reemplazo.compare("reemplazo_padre") == 0)||(T_reemplazo.compare("None") == 0))&&(subgen >= (maxsubgen-1))) 
     {  
        // con reemplazo_padre evaluo el mejor indidividuo (j=0) con el clasificador en la ultima generacion       
        params[2] = 1; 
