@@ -64,34 +64,40 @@ const int maxstring = 300;
 class AG {
 
 private:
-       double pcruza, pmutacion;          // PROBABILIDADES DE CRUZA Y MUTACION
-       double prom, max, min;             // GUARDO ESTADISTICAS SOBRE FITNESS PARA MOSTRAR
-       MPI_Comm everyone;                 // VARIABLE DE MPI
-       float activ_rate;                  // TASA DE ACTIVACIONES PARA INICALIZACION
-       fit_vect aptitud_min, aptitud_max; // minimo y maximo historico observado para cada objetivo
-       std::ofstream results;             // ARCHIVO DE TEXTO DE RESULTADOS
+       double pcruza, pmutacion;               // PROBABILIDADES DE CRUZA Y MUTACION
+       double prom, max, min;                  // GUARDO ESTADISTICAS SOBRE FITNESS PARA MOSTRAR
+       MPI_Comm everyone;                      // VARIABLE DE MPI       
+       fit_vect aptitud_min, aptitud_max;      // minimo y maximo historico observado para cada objetivo
+       std::ofstream results;                  // ARCHIVO DE TEXTO DE RESULTADOS
        std::default_random_engine generator;       
+       vector <vector<short>> clusters;        // array con los clusters actuales: cada fila tiene los indices de un cluster
 
 public:
   
-       int nObjctvs;                      // CANTIDAD DE OBJETIVOS  (no uso short porque se manda por mpi como int)
-       short maxgen;                      // NUMERO MAXIMO DE GENERACIONES
-       short gen;                         // GENERACION ACTUAL              
-       short nsubpob;                     // CANTIDAD DE SUBPOBLACIONES       
-       short Elite;
-       short dist_opt;                    // medida de distancia para fitness sharing: 0-'variable space', 1-'objective space'
-       double alfa;
-       double sigma_share, alfa_share;
-       string string_aux_filename = "";       
-       
-       poblacion pobvieja;                // POBLACION EN LA GENERACION ACTUAL
-       poblacion pobnueva;                // POBLACION DE LA SIGUIENTE GENERACION
-                                          
-       string fecha;                      // FECHA ACTUAL
-       string slvbin;                     // Nombre del ejecutvable fitness
-       string res_file;                   // nombre de archivo TXT de resultados
-       string crom_file;                  // nombre de archivo TXT de los mejores cromosomas (frente Pareto)
-       string folder;                     // directorio para los archivos de resultados
+       int nObjctvs;                           // CANTIDAD DE OBJETIVOS  (no uso short porque se manda por mpi como int)
+       short maxgen;                           // NUMERO MAXIMO DE GENERACIONES
+       short gen;                              // GENERACION ACTUAL              
+       short nsubpob;                          // CANTIDAD DE SUBPOBLACIONES       
+       short Elite;                            
+       short dist_opt;                         // medida de distancia para fitness sharing: 0-'variable space', 1-'objective space'
+       double alfa;                            
+       double sigma_share, alfa_share;         
+       string string_aux_filename = "";            
+       float activ_rate, activ_rate_sp;        // TASA DE ACTIVACIONES PARA INICALIZACION
+       bool stepped_activ;                     // tasa de activacion variable / escalonada (true) o fija (false) / solo para la poblacion general
+       vector <float> activ_rates;             // vector tasas de activacion para el caso escalonado
+       bool ModifyRepeated;                    // bandera para aplicar operador de variacion en cromosomas repetidos     
+       short FitnessOption;                    // opcion para elegir el esquema de Fitness
+       bool FitnessNRScale;                    // multiplicar Fitness por nro de indiv en el mismo rank
+                                               
+       poblacion pobvieja;                     // POBLACION EN LA GENERACION ACTUAL
+       poblacion pobnueva;                     // POBLACION DE LA SIGUIENTE GENERACION
+                                               
+       string fecha;                           // FECHA ACTUAL
+       string slvbin;                          // Nombre del ejecutvable fitness
+       string res_file;                        // nombre de archivo TXT de resultados
+       string crom_file;                       // nombre de archivo TXT de los mejores cromosomas (frente Pareto)
+       string folder;                          // directorio para los archivos de resultados
        
        
        /*-----------------
@@ -137,6 +143,7 @@ public:
 
        // calcular distancia entre individuos
        double distancia(individuo indiv_x, individuo indiv_y, int in_cromlen, short nObjctvs, short dist_opt);
+       double distancia(individuo indiv_x, vector<double> centroide, int in_cromlen);
        
 
        // FUNCION DE FITNESS SHARING
@@ -157,9 +164,10 @@ public:
        // FUNCION AUXILIAR PARA IMPRIMIR ALGUN TIPO DE NOTIFICACION EN EL ARCHIVO DE RESULTADOS
        void Notificar(string notify);
        
-       unsigned Verificar(individuo *johndoe);
-       
+       unsigned Verificar(individuo *johndoe);       
        unsigned Verificar(cromosoma *johndoe);
+       
+       void CalcularDistancias(poblacion &inPOB, bool operador_diversidad);
        
        // DETENER EL ALGORITMO???
        void Terminar(int nproc, int lcrom);
@@ -237,7 +245,7 @@ cromosoma AG::initcrom(int in_lcrom, float activ_rate)
     random_shuffle ( idx.begin(), idx.end() );
 
     // std::lognormal_distribution<double> distribution(activ_rate,0.5);
-    std::normal_distribution<double> distribution(10*activ_rate,2.5);
+    std::normal_distribution<double> distribution(10.0*activ_rate,2.5);
     double number = distribution(generator);
     
     nact = (int) ((number/10.0)*in_lcrom);
@@ -387,8 +395,9 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
 
         j = j + 2;
 
-    } // while ( j <= (pobvieja.tampob-1));
+    } 
     
+    CalcularDistancias(pobnueva, ModifyRepeated);
    
     /*------ MPI VARIOS + Var Paralelizacion ------*/
 
@@ -471,13 +480,24 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
            }
        }
     }
-
-   
+  
     CalcularFitness(pobnueva);
 
     ImprimirFrente(pobnueva, gen, max, false);
+    
+    double caux=0.0;
+    for (i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
+    caux=caux/clusters.size();    
+    double fit_aux=0.0; int ibest=0;
+    for (i=0;i<pobnueva.tampob;i++)
+        if (fit_aux<=pobnueva.individuos[i].Fitness)
+        {
+            fit_aux=pobnueva.individuos[i].Fitness;
+            ibest=i;
+        }
 
-    cout << "Generacion " << gen << " - Obj1: " << pobnueva.individuos[0].aptitud[0] << ", Obj2: " << pobnueva.individuos[0].aptitud[1] << ", Fsize: " << pobnueva.Current_Front_Size << endl;
+    cout << "Generacion " << gen << " - Obj1: " << pobnueva.individuos[ibest].aptitud[0] << ", Obj2: " << pobnueva.individuos[ibest].aptitud[1] << ", Fsize: " << pobnueva.Current_Front_Size; 
+    cout << ", Clusters: " << clusters.size() << ", AvgClusSize: " << (int) caux << ", MeanDist: " << pobnueva.mean_dist << endl;
     
     toc();
     
@@ -521,26 +541,90 @@ double AG::distancia(individuo indiv_x, individuo indiv_y, int in_cromlen, short
 
 
 
+double AG::distancia(individuo indiv_x, vector<double> centroide, int in_cromlen)
+{
+
+    double dist = 0.0;
+
+    for (int r=0;r<in_cromlen;r++) 
+        dist = dist + pow((indiv_x.crom[r] - centroide[r]),2.0);
+    
+    dist = sqrt(dist/in_cromlen);  
+
+    return dist;
+}      
+
+
+
+
+
+void AG::CalcularDistancias(poblacion &inPOB, bool operador_diversidad)
+{
+    int i, j, k;
+    double distance;   
+    float flip_rate = 0.1;
+
+    vector <int> idx;
+    int nch = 0;
+    idx.resize(inPOB.lcrom);
+    for (i=0;i<inPOB.lcrom;i++) idx[i]=i;                     
+ 
+    if (inPOB.mean_dist<0.1) flip_rate = 10*flip_rate;
+    
+    inPOB.mean_dist = 0.0;
+    for (j=0;j<inPOB.tampob;j++)
+    {   
+        inPOB.individuos[j].distancias.clear();
+        inPOB.individuos[j].distancias.resize(inPOB.tampob);
+        
+        inPOB.individuos[j].distancias[j]=0.0;
+        for (i=0;i<j;i++)
+        {    
+            // calcular las distancia de cada solucion i a j            
+            distance = distancia(inPOB.individuos[i],inPOB.individuos[j],inPOB.lcrom,nObjctvs,dist_opt);
+            
+            if ((distance<=1e-10)&&(operador_diversidad))
+            {
+                random_shuffle ( idx.begin(), idx.end() );                
+                nch = ceil(inPOB.lcrom*flip_rate/100);
+                if (nch==0) nch=1;
+                for (k=0;k<nch;k++)
+                inPOB.individuos[j].crom[idx[k]] = !inPOB.individuos[j].crom[idx[k]];
+            }
+            
+            distance = distancia(inPOB.individuos[i],inPOB.individuos[j],inPOB.lcrom,nObjctvs,dist_opt);
+            
+            inPOB.individuos[j].distancias[i] = distance;
+            inPOB.individuos[i].distancias[j] = distance;
+            inPOB.mean_dist = inPOB.mean_dist + distance;
+        }
+    }
+    
+    inPOB.mean_dist =  inPOB.mean_dist / (inPOB.tampob*(1.0*inPOB.tampob/2.0));
+
+    return;    
+}
+
+
+
+
+
+
+
+
+
 void AG::CalcularFitness(poblacion &inPOB)
 {
     // recalcular segun reglas del MOGA
-    //     
     // calculo el rango r(x,t) para cada individuo
     int i, k, j, mxrango=0;
     double acum;
-    //tic();
-
-    for (j=0;j<inPOB.tampob;j++) {
-        inPOB.individuos[j].rango = 1;
-        inPOB.individuos[j].distancias.resize(inPOB.tampob);
-    }    
- 
-    inPOB.mean_dist = 0;
+    
     bool flag1, flag2;
     for (j=0;j<inPOB.tampob;j++)
     {   
+        inPOB.individuos[j].rango = 1;
 
-        inPOB.individuos[j].distancias[j]=0.0;
         for (i=0;i<inPOB.tampob;i++)
         {    
             // contar las soluciones q dominan a j
@@ -554,13 +638,83 @@ void AG::CalcularFitness(poblacion &inPOB)
             
             if (inPOB.individuos[j].rango>mxrango) mxrango = inPOB.individuos[j].rango;
             
-            // calcular las distancia de cada solucion i a j            
-            inPOB.individuos[j].distancias[i] = distancia(inPOB.individuos[i],inPOB.individuos[j],inPOB.lcrom,nObjctvs,dist_opt);
-            inPOB.mean_dist = inPOB.mean_dist + inPOB.individuos[j].distancias[i];
         }
 
     }
-    inPOB.mean_dist =  inPOB.mean_dist / (inPOB.tampob*inPOB.tampob);
+    
+    /* ------------------------------------------------------------------
+    * ------------ identificar clusters de individuos -------------------
+    * ---------------------------------------------------------------- */
+    
+    bool clus_flag1=false;
+    for (int r=0; r<clusters.size();r++) clusters[r].clear();
+    clusters.clear();    
+    
+    for (i=0;i<inPOB.tampob;i++)
+    {           
+        
+        for (int r=0; r<clusters.size();r++)
+        {
+            if (!(std::find(clusters[r].begin(), clusters[r].end(), i) != clusters[r].end()))  // true -> i NO esta en clusters[r]
+            {
+                clus_flag1=true;
+                for (int s=0; s<clusters[r].size();s++)
+                    if (0.0==sharing_fun(inPOB.individuos[i].distancias[clusters[r][s]], sigma_share, alfa_share)) clus_flag1=false;
+                if ((clusters[r].size()>0)&&(clus_flag1)) clusters[r].push_back(i);                    
+            }
+                
+        }
+        clus_flag1=false;
+        
+        for (j=0;j<i;j++)
+        {                        
+            if (0.0<sharing_fun(inPOB.individuos[i].distancias[j], sigma_share, alfa_share))  // sharing>0 <=> distancia<sigma
+            {    
+                for (int r=0; r<clusters.size();r++)
+                {
+                    clus_flag1=false;
+                    if ( std::find(clusters[r].begin(), clusters[r].end(), i) != clusters[r].end() )  // true -> i esta en clusters[r]
+                    {
+                        if ( !(std::find(clusters[r].begin(), clusters[r].end(), j) != clusters[r].end()) )  // true -> j NO esta en clusters[r]
+                        {
+                            clus_flag1=true;
+                            for (int s=0; s<clusters[r].size();s++) // recorro los elementos del cluster r                                
+                            {    
+                                if (0.0==sharing_fun(inPOB.individuos[j].distancias[clusters[r][s]], sigma_share, alfa_share)) 
+                                { 
+                                    clus_flag1=false;
+                                    break;
+                                }    
+                            }    
+                            if (clus_flag1)   // si true -> j esta cerca de todos los elementos del cluster
+                            { 
+                                clusters[r].push_back(j);
+                                break;
+                            }    
+                            
+                        } else {              // implica que j ya esta en un cluster junto con i
+                            clus_flag1=true;
+                            break;            
+                        }    
+                    }
+                    if (clus_flag1) break;    // implica que ya se agrego j en un cluster junto con i
+                }
+                if (!clus_flag1)              // salio del for r sin haber cluster con i y j
+                {
+                    vector <short> aux;
+                    aux.push_back(i);
+                    aux.push_back(j);
+                    clusters.push_back(aux);
+                }
+                
+            }
+
+        }
+    }
+
+    /* ------------------------------------------------------------------
+    * -------------------------------------------------------------------
+    * ---------------------------------------------------------------- */
 
     vector <short> nk;
     double ax, axc;
@@ -612,12 +766,46 @@ void AG::CalcularFitness(poblacion &inPOB)
         // inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness - inPOB.individuos[j].rango;
         
         // calcular shared fitness        
-        // inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness / inPOB.individuos[j].ncount;
-        // inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].mean_dist/inPOB.tampob;
-        if (inPOB.individuos[j].mean_dist>0.0)
-           inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].mean_dist/inPOB.individuos[j].nr;
-        else
-           inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness;        
+        switch (FitnessOption)
+        {        
+            case 1:
+                inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness / inPOB.individuos[j].ncount;
+                break;        
+            case 2:        
+                if (inPOB.individuos[j].mean_dist>0.0)
+                    inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].mean_dist/inPOB.individuos[j].nr;
+                else
+                    inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness;        
+                break;                
+            case 3:
+                inPOB.individuos[j].sFitness = inPOB.individuos[j].Fitness;
+                break;
+        }
+    }
+
+    if (FitnessOption==3) 
+    {    
+        for (j=0;j<clusters.size();j++)
+        {
+            vector <double> centroide;
+            for (i=0;i<inPOB.lcrom;i++)
+            {
+                double auxc=0.0;
+                for (k=0;k<clusters[j].size();k++)
+                {
+                    auxc = auxc + inPOB.individuos[clusters[j][k]].crom[i];
+                }
+                auxc = auxc/clusters[j].size();
+                centroide.push_back(auxc);
+            }
+            
+            for (k=0;k<clusters[j].size();k++)
+            {            
+                inPOB.individuos[clusters[j][k]].sFitness = inPOB.individuos[clusters[j][k]].sFitness*(1.0 - sharing_fun(distancia(inPOB.individuos[clusters[j][k]], centroide, inPOB.lcrom), sigma_share, alfa_share));
+            }
+            
+            centroide.clear();
+        }
     }
 
     vector <short> acumSFitness;
@@ -634,8 +822,11 @@ void AG::CalcularFitness(poblacion &inPOB)
     // recalcular fitness
     for (j=0;j<inPOB.tampob;j++)
     {   
-        // inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].sFitness*inPOB.individuos[j].nr/acumSFitness[inPOB.individuos[j].rango-1];
-        inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].sFitness/acumSFitness[inPOB.individuos[j].rango-1];
+        if (FitnessNRScale)
+            inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].sFitness*inPOB.individuos[j].nr/acumSFitness[inPOB.individuos[j].rango-1];
+        else 
+            inPOB.individuos[j].Fitness = inPOB.individuos[j].Fitness*inPOB.individuos[j].sFitness/acumSFitness[inPOB.individuos[j].rango-1];
+        
         if (max<inPOB.individuos[j].Fitness)  max = inPOB.individuos[j].Fitness;             
     }  
  
@@ -680,8 +871,8 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
       desorden = false;
       for (j=0;j<(pobnueva.tampob-(k+1));j++)
       {
-        // if (pobnueva.individuos[indice[j]].Fitness < pobnueva.individuos[indice[j+1]].Fitness)
-        if (pobnueva.individuos[indice[j]].rango > pobnueva.individuos[indice[j+1]].rango)
+        //if (pobnueva.individuos[indice[j]].rango > pobnueva.individuos[indice[j+1]].rango)
+        if (pobnueva.individuos[indice[j]].Fitness < pobnueva.individuos[indice[j+1]].Fitness)
         {
           
               eraser = indice[j];
@@ -780,7 +971,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
                    subpob[j].individuos[i].aptitud = pobnueva.individuos[elegidos[j]].aptitud;
             } else {      // inicializo los otros aleatoriamente
                    // for (k=0;k<subpob[j].lcrom;k++) { subpob[j].individuos[i].crom[k] = flip(0.5); }           // old init
-                   subpob[j].individuos[i].crom = initcrom(subpob[j].lcrom, activ_rate);                         // new init
+                   subpob[j].individuos[i].crom = initcrom(subpob[j].lcrom, activ_rate_sp);                      // new init
                    for (int ij=0;ij<(nObjctvs);ij++){ subpob[j].individuos[i].aptitud[ij] = 0; }
             }  
             subpob[j].individuos[i].padre1 = 0;
@@ -847,11 +1038,11 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
             } 
         }
 
+        CalcularDistancias(pobnueva, ModifyRepeated);
+        CalcularFitness(pobnueva);
     }
     
-    if ((T_reemplazo.compare("reemplazo_padre") == 0)||(T_reemplazo.compare("None") == 0)) CalcularFitness(pobnueva);
-    
-    if (T_reemplazo.compare("reemplazo_completo") == 0) {
+    if ((T_reemplazo.compare("reemplazo_completo") == 0)||(T_reemplazo.compare("reemplazo_selecto") == 0)) {
         // reemplazo todos los individuos de la pob general que sean mejorados por individuos de las subpobs
         
         auxiliar.evaluate = true;
@@ -877,33 +1068,60 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
             }
         }
 
+        CalcularDistancias(pobnueva, ModifyRepeated);
         CalcularFitness(pobnueva);
 
-        // ordenamiento de la SUPER-POBLACION
-        k = 0;    
-        do {
-           desorden = false;
-           for (j=0;j<((short) pobnueva.individuos.size()-(k+1));j++)
-           {
-               // if (pobnueva.individuos[j].aptitud[0] < pobnueva.individuos[j+1].aptitud[0])           //       <-- podría ser también
-               if (pobnueva.individuos[j].Fitness < pobnueva.individuos[j+1].Fitness)                    // parece la mejor opcion
-               // if (pobnueva.individuos[j].rango > pobnueva.individuos[j+1].rango)    -> no parece buena opcion segun resultados prelim
-               {
-                   borrador = pobnueva.individuos[j];
-                   pobnueva.individuos[j] = pobnueva.individuos[j+1];
-                   pobnueva.individuos[j+1] = borrador;
-                   desorden = true;
-               }
-           }
-           k++;
+        if (T_reemplazo.compare("reemplazo_completo") == 0)
+        {
         
-        }  while (desorden);
+            // ordenamiento de la SUPER-POBLACION
+            k = 0;    
+            do {
+            desorden = false;
+            for (j=0;j<((short) pobnueva.individuos.size()-(k+1));j++)
+            {
+                // if (pobnueva.individuos[j].aptitud[0] < pobnueva.individuos[j+1].aptitud[0])           //       <-- podría ser también
+                if (pobnueva.individuos[j].Fitness < pobnueva.individuos[j+1].Fitness)                    // parece la mejor opcion
+                // if (pobnueva.individuos[j].rango > pobnueva.individuos[j+1].rango)    -> no parece buena opcion segun resultados prelim
+                {
+                    borrador = pobnueva.individuos[j];
+                    pobnueva.individuos[j] = pobnueva.individuos[j+1];
+                    pobnueva.individuos[j+1] = borrador;
+                    desorden = true;
+                }
+            }
+            k++;
+            
+            }  while (desorden);
+            
+            // TRUNCADO DE LA SUPER-POBLACION
+            
+            pobnueva.individuos.resize(pobnueva.tampob); 
+        }
         
-        // TRUNCADO DE LA SUPER-POBLACION
+        if (T_reemplazo.compare("reemplazo_selecto") == 0) 
+        {
+            double sumaptitud = 0;
+            for (i=0; i<pobnueva.tampob; i++)
+                sumaptitud = sumaptitud + pobnueva.individuos[i].Fitness;
+            
+            for (i=0; i<pobnueva.tampob; i++){
+                pobvieja.individuos[i] = pobnueva.individuos[seleccion(pobnueva.tampob, sumaptitud, &pobnueva, seltype)];
+            }
+            
+            pobnueva.individuos.resize(pobnueva.tampob); 
+            
+            for (i=0; i<pobnueva.tampob; i++){
+                pobnueva.individuos[i] = pobvieja.individuos[i];
+            }
+            
+        }
         
-        pobnueva.individuos.resize(pobnueva.tampob); 
+        CalcularDistancias(pobnueva, ModifyRepeated);
+        CalcularFitness(pobnueva);
+        
     }
-    
+        
     //----------------------------------//
 
     return;
@@ -1009,6 +1227,8 @@ poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutaty
 
       } while ( j <= SubPob.tampob-1);
     }
+    
+    CalcularDistancias(subpobnueva, ModifyRepeated);
  
     /*------ MPI VARIOS + Var Paralelizacion ------*/
 
@@ -1317,8 +1537,19 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
      {
           nf = Verificar(&pobvieja.individuos[j]);
           for (i=0;((i<nproc)&&(j<pobvieja.tampob));i++)
-          {
-             pobvieja.individuos[j].crom = initcrom(pobvieja.lcrom, activ_rate);                                     // new init
+          {              
+             if (stepped_activ) { 
+                if (j<=0.55*pobvieja.tampob)
+                    pobvieja.individuos[j].crom = initcrom(pobvieja.lcrom, activ_rates[0]);                                     
+                if ((j>0.55*pobvieja.tampob)&&(j<=0.85*pobvieja.tampob))
+                    pobvieja.individuos[j].crom = initcrom(pobvieja.lcrom, activ_rates[1]);
+                if (j>0.85*pobvieja.tampob)
+                    pobvieja.individuos[j].crom = initcrom(pobvieja.lcrom, activ_rates[2]);
+             } else 
+             {
+                pobvieja.individuos[j].crom = initcrom(pobvieja.lcrom, activ_rate);                                     // new init
+             }
+                           
              pobvieja.individuos[j].padre1 = 0;
              pobvieja.individuos[j].padre2 = 0;
 
@@ -1377,6 +1608,7 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
     }   
     */
     
+    CalcularDistancias(pobvieja, false); // son individuos "recien creados" -> no es necesario aplicar operador_diversidad
     CalcularFitness(pobvieja);
     
     ImprimirFrente(pobvieja, gen, max, false);
@@ -1824,6 +2056,10 @@ void AG::ImprimirGen(int generac, double maxfitness, double minfitness, double p
       
       string filename = res_file;
       if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);
+      
+      double caux=0.0;
+      for (short i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
+      caux=caux/clusters.size();         
           
       results << " " << endl;
       results << "|--------------------------------------------|" << endl;
@@ -1832,7 +2068,9 @@ void AG::ImprimirGen(int generac, double maxfitness, double minfitness, double p
       results << "|    Mejor Fitness: " << maxfitness << endl;
       results << "|    Promedio Fitness: " << prom << endl;      
       results << "|    Cantidad de Mutaciones: " << inPOB.NMutas << endl;
-      results << "|    Distancia de Media: " << inPOB.mean_dist << endl;
+      results << "|    Distancia de Media: " << inPOB.mean_dist << endl;      
+      results << "|    Cantidad de clusters: " << clusters.size() << endl;      
+      results << "|    Promedio cluster: " << (int) caux << endl;
       results << "|    "<< asctime (timeinfo); // << endl;
       results << "|--------------------------------------------|" << endl;
       results << " " << endl;
@@ -2027,10 +2265,19 @@ int main(int argc, char** argv)
     AlgGen.dist_opt = SETTINGS.get_int("dist_opt");
     bool onlyBest = false;
     onlyBest   = SETTINGS.get_bool("onlyBest");
+    AlgGen.activ_rate_sp = SETTINGS.get_dbl("TasaActivacionSubPob");
+    AlgGen.ModifyRepeated = SETTINGS.get_bool("ModifyRepeated");
+    AlgGen.FitnessOption = SETTINGS.get_int("FitnessOption");
+    AlgGen.FitnessNRScale = SETTINGS.get_bool("FitnessNRScale");
     
-    
-    //     <-    
-    
+    AlgGen.stepped_activ = SETTINGS.get_bool("TasaActivacionEscalonada");
+    if (AlgGen.stepped_activ) {
+        AlgGen.activ_rates.resize(3);
+        AlgGen.activ_rates[0]=SETTINGS.get_dbl("TasaActivacion55");
+        AlgGen.activ_rates[1]=SETTINGS.get_dbl("TasaActivacion30");
+        AlgGen.activ_rates[2]=SETTINGS.get_dbl("TasaActivacion15");
+    }
+   
     // parametros para SUBPOBLACIONES ->       
     short Nsubpobs = SETTINGS.get_int("NSubPoblaciones");//0; //4; 
     short tamSubPob = SETTINGS.get_int("Nindividuos_s");//20;

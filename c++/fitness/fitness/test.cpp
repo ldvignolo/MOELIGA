@@ -436,6 +436,12 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
          if (crom[k])  CFeats++;
      }
      
+     
+     if (CFeats==0) 
+     {
+         return aptitude;
+     }    
+     
      /************************************************************************************/
      
      size_t elements;
