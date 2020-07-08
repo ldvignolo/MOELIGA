@@ -1042,7 +1042,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
         CalcularFitness(pobnueva);
     }
     
-    if ((T_reemplazo.compare("reemplazo_completo") == 0)||(T_reemplazo.compare("reemplazo_selecto") == 0)) {
+    if ((T_reemplazo.compare("reemplazo_completo") == 0)||(T_reemplazo.compare("reemplazo_seleccion") == 0)) {
         // reemplazo todos los individuos de la pob general que sean mejorados por individuos de las subpobs
         
         auxiliar.evaluate = true;
@@ -1099,7 +1099,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
             pobnueva.individuos.resize(pobnueva.tampob); 
         }
         
-        if (T_reemplazo.compare("reemplazo_selecto") == 0) 
+        if (T_reemplazo.compare("reemplazo_seleccion") == 0) 
         {
             double sumaptitud = 0;
             for (i=0; i<pobnueva.tampob; i++)
