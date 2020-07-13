@@ -1,17 +1,12 @@
-#!/bin/sh
-# set -x
+#!/bin/bash
 
-./agp cfg leuk_SETTINGS.cfg
-./agp cfg leuk_SETTINGS.cfg
-./agp cfg leuk_SETTINGS.cfg
-./agp cfg leuk_SETTINGS.cfg
-./agp cfg leuk_SETTINGS.cfg
+
+
+for i in {0..10..1}
+  do 
+     ./agp cfg ./config/leuk/leuk_SETTINGS_$i.cfg
+ done
 
 
 python3 GetAvgResults.py resultados_para_borrar_leuk_PROBANDOSCRIPT/
 
-# ./agp npr 4 cfg leuk_SETTINGS.cfg
-# ./agp npr 4 cfg leuk_SETTINGS.cfg
-# ./agp npr 4 cfg leuk_SETTINGS.cfg
-# ./agp npr 4 cfg leuk_SETTINGS.cfg
-# ./agp npr 4 cfg leuk_SETTINGS.cfg
