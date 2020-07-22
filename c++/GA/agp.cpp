@@ -89,6 +89,7 @@ public:
        bool ModifyRepeated;                    // bandera para aplicar operador de variacion en cromosomas repetidos     
        short FitnessOption;                    // opcion para elegir el esquema de Fitness
        bool FitnessNRScale;                    // multiplicar Fitness por nro de indiv en el mismo rank
+       short Rfun;                             // medida de ranking para elegir el mejor individuo del ultimo frente 
                                                
        poblacion pobvieja;                     // POBLACION EN LA GENERACION ACTUAL
        poblacion pobnueva;                     // POBLACION DE LA SIGUIENTE GENERACION
@@ -1949,19 +1950,30 @@ void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onl
     }
     
     if (onlyBest) {
-         int Best = 0;
+         int nc = 0, Best = 0;
          double dist = __DBL_MAX__, aux=0.0;
         
+         
          for (unsigned j=0;j<inPOB.individuos.size();j++){ 
             if (aux_rank == inPOB.individuos[j].rango)  {
-                
-                    aux = pow(pow((1.0 - inPOB.individuos[j].aptitud[0]),2.0) + pow((1.0 - inPOB.individuos[j].aptitud[1]),2.0), 0.5); // r1
-                    // aux = inPOB.individuos[j].aptitud[0] / (-1.0*(inPOB.lcrom*inPOB.individuos[j].aptitud[1]-inPOB.lcrom));         // r2                    
-                    
-                    if (aux<dist) {
-                        dist = aux;
-                        Best = j;
-                    }                    
+
+                 if (Rfun==2) 
+                 {  
+                     nc = 0;
+                     for (int i=0;i<inPOB.lcrom;i++)
+                         if (inPOB.individuos[j].crom[i]) nc++;
+                         
+                     aux = 1.0 - inPOB.individuos[j].aptitud[0] / nc;                                                                    // r2                    
+                 }   
+                 if (Rfun==1) 
+                 {    
+                     aux = pow(pow((1.0 - inPOB.individuos[j].aptitud[0]),2.0) + pow((1.0 - inPOB.individuos[j].aptitud[1]),2.0), 0.5); // r1
+                 }    
+                   
+                 if (aux<dist) {
+                     dist = aux;
+                     Best = j;
+                 }                    
             }  
         }
         ImprimirCromo(inPOB.individuos[Best], generac, -10, true, inPOB.lcrom);
@@ -2020,8 +2032,8 @@ void AG::ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront,
         double r1 = 1.0 - pow(pow((1.0 - johndoe.aptitud[0]),2.0) + pow((1.0 - johndoe.aptitud[1]),2.0), 0.5);
         double r2 = johndoe.aptitud[0]/nc;
 
-        results << "::> Medida para elegir el mejor 1 (mayor mejor): " << r1 << endl;
-        results << "::> Medida para elegir el mejor 2 (mayor mejor): " << r2 << endl;
+        results << "::> Medida para elegir el mejor R1: " << r1 << endl;
+        results << "::> Medida para elegir el mejor R2: " << r2 << endl;
         
         results.close();
         
@@ -2283,6 +2295,8 @@ int main(int argc, char** argv)
     AlgGen.ModifyRepeated = SETTINGS.get_bool("ModifyRepeated");
     AlgGen.FitnessOption = SETTINGS.get_int("FitnessOption");
     AlgGen.FitnessNRScale = SETTINGS.get_bool("FitnessNRScale");
+    AlgGen.Rfun = SETTINGS.get_int("Rfun");
+    
     
     AlgGen.stepped_activ = SETTINGS.get_bool("TasaActivacionEscalonada");
     if (AlgGen.stepped_activ) {
