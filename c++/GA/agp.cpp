@@ -152,7 +152,7 @@ public:
        void CalcularFitness(poblacion &inPOB);
       
        // IMPRIMIR datos de individuo en TXT
-       // void Imprimir(double *fitness, int generac, int indiv, cromosoma genes);
+       // void Imprimir(double *fitness, int generac, int indiv, cromosoma genes);       
        void ImprimirCromo(individuo johndoe, int generac, int indiv, bool new_front, int lcrom);
        
        // Buscar mejor individuo e IMPRIMIR en TXT
@@ -1049,7 +1049,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
         auxiliar.crom.resize(pobnueva.lcrom);
         auxiliar.aptitud.resize(nObjctvs);
         auxiliar.Fitness = 0;
-
+        int original_tampob=pobnueva.tampob, icount=pobnueva.tampob;
         //  CREO SUPER-POBLACION
         for (j=0;j<Nsubpobs;j++) {
             
@@ -1065,9 +1065,11 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
                     auxiliar.aptitud[ij] =  subpob[j].individuos[i].aptitud[ij];
                 
                 pobnueva.individuos.push_back(auxiliar);
+                icount++;
             }
         }
-
+        
+        pobnueva.tampob = icount;
         CalcularDistancias(pobnueva, ModifyRepeated);
         CalcularFitness(pobnueva);
 
@@ -1095,8 +1097,9 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
             }  while (desorden);
             
             // TRUNCADO DE LA SUPER-POBLACION
-            
+            pobnueva.tampob = original_tampob;
             pobnueva.individuos.resize(pobnueva.tampob); 
+            
         }
         
         if (T_reemplazo.compare("reemplazo_seleccion") == 0) 
@@ -1105,10 +1108,13 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
             for (i=0; i<pobnueva.tampob; i++)
                 sumaptitud = sumaptitud + pobnueva.individuos[i].Fitness;
             
-            for (i=0; i<pobnueva.tampob; i++){
+            pobvieja.tampob = original_tampob;
+            pobvieja.individuos.resize(pobnueva.tampob); 
+            for (i=0; i<pobvieja.tampob; i++){
                 pobvieja.individuos[i] = pobnueva.individuos[seleccion(pobnueva.tampob, sumaptitud, &pobnueva, seltype)];
             }
-            
+
+            pobnueva.tampob = original_tampob;
             pobnueva.individuos.resize(pobnueva.tampob); 
             
             for (i=0; i<pobnueva.tampob; i++){
@@ -1949,7 +1955,8 @@ void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onl
          for (unsigned j=0;j<inPOB.individuos.size();j++){ 
             if (aux_rank == inPOB.individuos[j].rango)  {
                 
-                    aux = pow(pow((1.0 - inPOB.individuos[j].aptitud[0]),2.0) + pow((1.0 - inPOB.individuos[j].aptitud[1]),2.0), 0.5);
+                    aux = pow(pow((1.0 - inPOB.individuos[j].aptitud[0]),2.0) + pow((1.0 - inPOB.individuos[j].aptitud[1]),2.0), 0.5); // r1
+                    // aux = inPOB.individuos[j].aptitud[0] / (-1.0*(inPOB.lcrom*inPOB.individuos[j].aptitud[1]-inPOB.lcrom));         // r2                    
                     
                     if (aux<dist) {
                         dist = aux;
@@ -2009,7 +2016,13 @@ void AG::ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront,
         results << "::> Rank: " << johndoe.rango << endl;
         for (int i=0;i<(nObjctvs);i++)
             results << "::> Objetivo " << i <<": "  << johndoe.aptitud[i] << endl;
+       
+        double r1 = 1.0 - pow(pow((1.0 - johndoe.aptitud[0]),2.0) + pow((1.0 - johndoe.aptitud[1]),2.0), 0.5);
+        double r2 = johndoe.aptitud[0]/nc;
 
+        results << "::> Medida para elegir el mejor 1 (mayor mejor): " << r1 << endl;
+        results << "::> Medida para elegir el mejor 2 (mayor mejor): " << r2 << endl;
+        
         results.close();
         
         // guardo los cromosoma en archivo separado para correr los tests
@@ -2039,6 +2052,7 @@ void AG::ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront,
      
      return;
 }
+
 //===================================================================
 
 
