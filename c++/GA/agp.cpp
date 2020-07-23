@@ -1957,18 +1957,20 @@ void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onl
          for (unsigned j=0;j<inPOB.individuos.size();j++){ 
             if (aux_rank == inPOB.individuos[j].rango)  {
 
-                 if (Rfun==2) 
-                 {  
+                 if (Rfun==1) 
+                 {    
+                     aux = pow(pow((1.0 - inPOB.individuos[j].aptitud[0]),2.0) + pow((1.0 - inPOB.individuos[j].aptitud[1]),2.0), 0.5); // r1
+                     
+                 } else { // if (Rfun==2) // por omision
+                   
                      nc = 0;
                      for (int i=0;i<inPOB.lcrom;i++)
                          if (inPOB.individuos[j].crom[i]) nc++;
                          
-                     aux = 1.0 - inPOB.individuos[j].aptitud[0] / nc;                                                                    // r2                    
-                 }   
-                 if (Rfun==1) 
-                 {    
-                     aux = pow(pow((1.0 - inPOB.individuos[j].aptitud[0]),2.0) + pow((1.0 - inPOB.individuos[j].aptitud[1]),2.0), 0.5); // r1
+                     aux = 1.0 - inPOB.individuos[j].aptitud[0] / nc;                                                                  // r2                    
                  }    
+                 
+                 
                    
                  if (aux<dist) {
                      dist = aux;
