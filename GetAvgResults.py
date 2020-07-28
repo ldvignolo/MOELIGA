@@ -1,6 +1,7 @@
 import numpy as np
 import os, sys
 from glob import glob
+from statistics import mode
 
 
 if (len(sys.argv)>1):
@@ -20,7 +21,7 @@ vNFeat=[]
 for i,filename in enumerate(file_list):
     ruta, archivo = os.path.split(filename) 
     #print(i+1, ' ', archivo)
-
+    flag = False
     classifier=0
     UAR = [0.0,0.0]
     NFeat = 0
@@ -28,6 +29,7 @@ for i,filename in enumerate(file_list):
     for line in datafile:
         if 'ELM' in line:
             classifier = 1
+            flag = True
         if 'SVM' in line:
             classifier = 0            
         if '> UAR:' in line:
@@ -51,9 +53,10 @@ for i,filename in enumerate(file_list):
     
 outfile = open(ResPath+'results_statistics.txt',"w")
 outfile.write("Statistics from "+str(len(vUARc0))+" experiments.\n") 
-outfile.write("SVM classifier: UAR Mean: "+str(np.mean(vUARc0))+", STD: "+str(np.std(vUARc0))+"\n") 
-outfile.write("ELM classifier: UAR Mean: "+str(np.mean(vUARc1))+", STD: "+str(np.std(vUARc1))+"\n") 
-outfile.write("No. Features: Mean: "+str(np.mean(vNFeat))+", STD: "+str(np.std(vNFeat))+"\n") 
+outfile.write("SVM classifier: UAR Mean: %.2f" % np.mean(vUARc0) + ", Median: %.3f" % np.median(vUARc0)+ ", Mode: %.3f" % mode(vUARc0)+ ", STD: %.3f" % np.std(vUARc0)+"\n") 
+if (flag):                                                                                                                                                             
+    outfile.write("ELM classifier: UAR Mean: %.2f" % np.mean(vUARc1) + ", Median: %.3f" % np.median(vUARc1)+ ", Mode: %.3f" % mode(vUARc1)+ ", STD: %.3f" % np.std(vUARc1)+"\n") 
+outfile.write("No. Features: Mean:       %.1f" % np.mean(vNFeat) + ", Median: %.1f" % np.median(vNFeat)+ ", Mode: %.2f" % mode(vNFeat)+ ", STD: %.2f" % np.std(vNFeat)+"\n") 
 outfile.close() 
 
   

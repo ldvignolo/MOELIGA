@@ -79,7 +79,6 @@ struct t_elm_par{
 };    
 t_elm_par elm_params;
 
-
 vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short pobtype, int NObjectives, float ptrain, unsigned ntest, bool c_eval);
 vector <string> SplitWords(string strString);
 struct svm_model* train(unsigned Nfeat, struct svm_problem datos);
@@ -93,6 +92,12 @@ double distL1(svm_node *x, svm_node *y, vector <int> indF);
 double Rmeasure(struct svm_problem data, int Nf);
 double Rmeasure(struct svm_problem data, cromosoma crom);
 double elm(struct svm_problem trn_data, struct svm_problem tst_data, int Nfeats, int elm_nhn, double elm_rf, bool multi, int max_nhn);
+
+
+double sigmoid(double value, double lambda)
+{
+    return  1.0 / (1.0 + exp( (-1.0)*value*lambda ) );
+}    
 
 
 int main(int argc, char** argv)
@@ -148,6 +153,10 @@ int main(int argc, char** argv)
     elm_params.nhn_max = SETTINGS.get_bool("elm_nhn_max");    
     
     clasificador = SETTINGS.get_str("classifier");
+    
+    bool Obj2Sigmod = SETTINGS.get_bool("Obj2Sigmod"); // false por omision     
+    float SigmLambda = SETTINGS.get_dbl("SigmLambda"); 
+    if (SigmLambda>500.0) SigmLambda = 2.5; // valor por omision
     
     float ptrain = SETTINGS.get_dbl("ptrain");
     unsigned ntest = SETTINGS.get_int("NTests");
@@ -269,6 +278,9 @@ int main(int argc, char** argv)
            }
         
            aptitud = fitness(cromovect, lcrom, rank, seed, pobtype, NObjectives, ptrain, ntest, c_eval); 
+           
+           if ((Obj2Sigmod) && (1<NObjectives))
+               aptitud[1] = sigmoid(aptitud[1], SigmLambda); 
            
            for (i=0;i<NObjectives;i++) fit[i] = aptitud[i];
            MPI_Send(fit, NObjectives, MPI_DOUBLE, 0, id, parent_comm);
@@ -690,7 +702,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
          }
          
          if (c_eval) 
-         {
+         {            
             if (caseInSensStringCompare(clasificador, str_svm)) {
             
                 modelo = train(CFeats, trnD_aux);
@@ -722,9 +734,11 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      if (NObjectives > 2)
          aptitude[2] = aptitude[2]/ntest;
        
-     if (Lcrom!=0)
-        aptitude[1] = (double (Lcrom-CFeats))/Lcrom;
-     else 
+     if (Lcrom!=0) 
+     {
+        aptitude[1] = (double (Lcrom-CFeats))/Lcrom;        
+        // aptitude[1] = sigmoid(aptitude[1], 2.5);  por simplicidad se aplica en main segun SETTINGS     
+     } else 
         aptitude[1] = 0;
 
      
