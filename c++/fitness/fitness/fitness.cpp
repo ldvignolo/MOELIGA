@@ -156,7 +156,7 @@ int main(int argc, char** argv)
     
     bool Obj2Sigmod = SETTINGS.get_bool("Obj2Sigmod"); // false por omision     
     float SigmLambda = SETTINGS.get_dbl("SigmLambda"); 
-    if (SigmLambda>500.0) SigmLambda = 2.5; // valor por omision
+    if (SigmLambda>500.0) SigmLambda = 1.5; // valor por omision
     
     float ptrain = SETTINGS.get_dbl("ptrain");
     unsigned ntest = SETTINGS.get_int("NTests");
