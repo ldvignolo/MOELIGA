@@ -228,7 +228,7 @@ void parse_command_line(int argc, char **argv)
 		      print_func = &print_null;
 		}  
 	}
-fprintf(stderr, "\n");
+    // fprintf(stderr, "\n");
 	svm_set_print_string_function(print_func);
 
 	// determine filenames
