@@ -800,6 +800,19 @@ void AG::CalcularFitness(poblacion &inPOB)
                 centroide.push_back(auxc);
             }
             
+            //---------------------------------------
+            /*
+            int aux=0, i_aux;
+            for (k=0;k<clusters[j].size();k++)
+                if (inPOB.individuos[clusters[j][k]].rango>aux){
+                    aux = inPOB.individuos[clusters[j][k]].rango;
+                    i_aux = k;
+                }
+            for (i=0;i<inPOB.lcrom;i++)
+                centroide.push_back(inPOB.individuos[clusters[j][i_aux]].crom[i]); 
+            */
+            //---------------------------------------
+            
             for (k=0;k<clusters[j].size();k++)
             {            
                 inPOB.individuos[clusters[j][k]].sFitness = inPOB.individuos[clusters[j][k]].sFitness*(1.0 - sharing_fun(distancia(inPOB.individuos[clusters[j][k]], centroide, inPOB.lcrom), sigma_share, alfa_share));
