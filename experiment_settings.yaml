@@ -1,0 +1,11 @@
+---
+ 
+ #classifier: ["svm"]
+ #test_classifier: ["svm"]
+ #ptrain: [70.0]
+ #onlyBest: [True] 
+ #TasaActivacionEscalonada: [True]
+ #SigmLambda: [0.5]
+ FitnessOption: [1]
+ 
+ 

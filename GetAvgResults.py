@@ -17,14 +17,16 @@ nf = len(file_list)
 vUARc0=[]
 vUARc1=[]
 vNFeat=[]
+vTTime=[]
 
 for i,filename in enumerate(file_list):
-    ruta, archivo = os.path.split(filename) 
+    # ruta, archivo = os.path.split(filename) 
     #print(i+1, ' ', archivo)
     flag = False
     classifier=0
     UAR = [0.0,0.0]
     NFeat = 0
+    TotalTime = 0
     datafile = open(filename)    
     for line in datafile:
         if 'ELM' in line:
@@ -33,30 +35,52 @@ for i,filename in enumerate(file_list):
         if 'SVM' in line:
             classifier = 0            
         if '> UAR:' in line:
-            # print(line.rstrip().split()[1],'',float(line.rstrip().split()[2]))
             UAR[classifier]=float(line.rstrip().split()[2])
         if '> Features:' in line:            
-            # print(line.rstrip().split()[1],'',int(line.rstrip().split()[2]))
             NFeat = int(line.rstrip().split()[2])        
     datafile.close()
     vUARc0.append(UAR[0])
     vUARc1.append(UAR[1])
     vNFeat.append(NFeat)
     
+    txtfilename = os.path.splitext(filename)[0]+'.txt'
+    # print(txtfilename)
+    datafile = open(txtfilename)
+    for line in datafile:
+        if 'TOTAL Time elapsed:' in line:
+            TotalTime = float(line.rstrip().split()[3])
+    vTTime.append(TotalTime)    
+    datafile.close()
+
+
+
+
+
+
+try:
+    modeUARc0 = mode(vUARc0)
+except:
+    modeUARc0 = -1
+try:
+    modeUARc1 = mode(vUARc1)
+except:
+    modeUARc1 = -1
+try:
+    modeNFeat = mode(vNFeat)
+except:
+    modeNFeat = -1
     
-#print(np.mean(vUARc0))
-#print(np.std(vUARc0))
-#print(np.mean(vUARc1))
-#print(np.std(vUARc1))    
-#print(np.mean(vNFeat))
-#print(np.std(vNFeat))    
     
 outfile = open(ResPath+'results_statistics.txt',"w")
 outfile.write("Statistics from "+str(len(vUARc0))+" experiments.\n") 
-outfile.write("SVM classifier: UAR Mean: %.2f" % np.mean(vUARc0) + ", Median: %.3f" % np.median(vUARc0)+ ", Mode: %.3f" % mode(vUARc0)+ ", STD: %.3f" % np.std(vUARc0)+"\n") 
+outfile.write("SVM classifier: UAR Mean: %.2f" % np.mean(vUARc0) + ", Median: %.3f" % np.median(vUARc0)+ ", Mode: %.3f" % modeUARc0+ ", STD: %.3f" % np.std(vUARc0)+"\n") 
 if (flag):                                                                                                                                                             
-    outfile.write("ELM classifier: UAR Mean: %.2f" % np.mean(vUARc1) + ", Median: %.3f" % np.median(vUARc1)+ ", Mode: %.3f" % mode(vUARc1)+ ", STD: %.3f" % np.std(vUARc1)+"\n") 
-outfile.write("No. Features: Mean:       %.1f" % np.mean(vNFeat) + ", Median: %.1f" % np.median(vNFeat)+ ", Mode: %.2f" % mode(vNFeat)+ ", STD: %.2f" % np.std(vNFeat)+"\n") 
+    outfile.write("ELM classifier: UAR Mean: %.2f" % np.mean(vUARc1) + ", Median: %.3f" % np.median(vUARc1)+ ", Mode: %.3f" % modeUARc1+ ", STD: %.3f" % np.std(vUARc1)+"\n") 
+outfile.write("No. Features: Mean:       %.1f" % np.mean(vNFeat) + ", Median: %.1f" % np.median(vNFeat)+ ", Mode: %.2f" % modeNFeat+ ", STD: %.2f" % np.std(vNFeat)+"\n")
+outfile.write("Elapsed Time: Mean:       %.1f" % np.mean(vTTime) + ", Median: %.1f" % np.median(vTTime) + ", STD: %.2f" % np.std(vTTime)+"\n") 
 outfile.close() 
+
+
+
 
   
