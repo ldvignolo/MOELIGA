@@ -2472,7 +2472,7 @@ int main(int argc, char** argv)
     } while ((AlgGen.gen < AlgGen.maxgen) & (count<( (short) AlgGen.maxgen* (((float) steady) / 100)) ));
 
     
-    AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom);
+    // AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom);
     
     if (onlyBest) AlgGen.ImprimirFrente(AlgGen.pobnueva, AlgGen.gen, 1.0, true);
     
@@ -2497,6 +2497,8 @@ int main(int argc, char** argv)
     cmd = "cat ";
     cmd.insert(cmd.length(), filename); 
     system(cmd.c_str());
+    
+    AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom);
 
     return 0;
 
