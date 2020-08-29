@@ -94,9 +94,9 @@ double Rmeasure(struct svm_problem data, cromosoma crom);
 double elm(struct svm_problem trn_data, struct svm_problem tst_data, int Nfeats, int elm_nhn, double elm_rf, bool multi, int max_nhn);
 
 
-double sigmoid(double value, double lambda)
+double sigmoid(double value, double lambda, double gamma)
 {
-    return  1.0 / (1.0 + exp( (-1.0)*value*lambda ) );
+    return  1.0 / (1.0 + exp( (-1.0)*(value+gamma)*lambda ) );
 }    
 
 
@@ -156,7 +156,9 @@ int main(int argc, char** argv)
     
     bool Obj2Sigmod = SETTINGS.get_bool("Obj2Sigmod"); // false por omision     
     float SigmLambda = SETTINGS.get_dbl("SigmLambda"); 
+    float SigmGamma = SETTINGS.get_dbl("SigmGamma");
     if (SigmLambda>500.0) SigmLambda = 1.5; // valor por omision
+    if (SigmGamma>500.0) SigmGamma = 0.0; // valor por omision
     
     float ptrain = SETTINGS.get_dbl("ptrain");
     unsigned ntest = SETTINGS.get_int("NTests");
@@ -170,14 +172,14 @@ int main(int argc, char** argv)
     // cout << "-> " << configs_tst << endl;
 
     /*--------------------------------*/
-
+    
     unsigned Nfeat;
     ReadProblemArff(trnfile, Nfeat, trnD, &trn_space[0]);
     ReadProblemArff(tstfile, Nfeat, tstD, &tst_space[0]);
     
     /*--------------------------------------------------*/
     /*--------------------------------------------------*/
-    
+
     auxD.y  = Malloc(double,trnD.l+tstD.l);
     auxD.x  = Malloc(struct svm_node *,trnD.l+tstD.l);
     auxD.l  = trnD.l+tstD.l;
@@ -222,7 +224,7 @@ int main(int argc, char** argv)
     cout << tstfile << endl;
     cout << configs_trn << endl;
     cout << configs_tst << endl;*/
-        
+    
     vector <string> cadena;
     cadena = SplitWords(configs_trn);
     int Xargc = cadena.size();
@@ -232,7 +234,7 @@ int main(int argc, char** argv)
        strcpy(Xargv[i], cadena[i].c_str()); 
     }
     parse_command_line(Xargc, Xargv);
-     
+    
     // MPI_Recv(params, 2, MPI_INTEGER, 0, id, parent_comm, &status);
     MPI_Recv(&seed, 1, MPI_FLOAT, 0, id, parent_comm, &status);
     MPI_Recv(&NObjectives, 1, MPI_INTEGER, 0, id, parent_comm, &status);     
@@ -280,7 +282,7 @@ int main(int argc, char** argv)
            aptitud = fitness(cromovect, lcrom, rank, seed, pobtype, NObjectives, ptrain, ntest, c_eval); 
            
            if ((Obj2Sigmod) && (1<NObjectives))
-               aptitud[1] = sigmoid(aptitud[1], SigmLambda); 
+               aptitud[1] = sigmoid(aptitud[1], SigmLambda, SigmGamma); 
            
            for (i=0;i<NObjectives;i++) fit[i] = aptitud[i];
            MPI_Send(fit, NObjectives, MPI_DOUBLE, 0, id, parent_comm);
@@ -653,7 +655,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
          
          if (data_shuffle) {
             make_partition(Lcrom);               
-            if (normalizar) scale_data(Lcrom, crom);
+            if ((normalizar)&&(jk==0)) scale_data(Lcrom, crom);
          }
      
          vector <short> pindx; 

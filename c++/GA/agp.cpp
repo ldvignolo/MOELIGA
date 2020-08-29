@@ -97,6 +97,7 @@ public:
        string fecha;                           // FECHA ACTUAL
        string slvbin;                          // Nombre del ejecutvable fitness
        string res_file;                        // nombre de archivo TXT de resultados
+       string yaml_file;                       // nombre de archivo yaml de resultados
        string crom_file;                       // nombre de archivo TXT de los mejores cromosomas (frente Pareto)
        string folder;                          // directorio para los archivos de resultados
        
@@ -107,8 +108,7 @@ public:
        
        // INICIALIZAR CROMOSOMA
        cromosoma initcrom(int in_lcrom, float activ_rate);
-       
-       
+
        // INICIALIZAR POBLACION
        void inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruza, double in_pmutacion, int nproc, float tasa_activ, string SETTINGS);
        
@@ -140,7 +140,7 @@ public:
        
        
        // EXTRAER RESULTADOS DE LA POBLACION???
-       resultado resultados(poblacion &inPOB);
+       statistics estadisticas(poblacion &inPOB);
 
        // calcular distancia entre individuos
        double distancia(individuo indiv_x, individuo indiv_y, int in_cromlen, short nObjctvs, short dist_opt);
@@ -151,16 +151,19 @@ public:
        double sharing_fun(double dist, double sigma, double alfa);
        
        void CalcularFitness(poblacion &inPOB);
-      
-       // IMPRIMIR datos de individuo en TXT
-       // void Imprimir(double *fitness, int generac, int indiv, cromosoma genes);       
-       void ImprimirCromo(individuo johndoe, int generac, int indiv, bool new_front, int lcrom);
-       
-       // Buscar mejor individuo e IMPRIMIR en TXT
-       void ImprimirFrente(poblacion &inPOB, int generac, double max_fit, bool onlyBest);
-       
+
        // IMPRIMIR datos de generacion en TXT
        void ImprimirGen(int generac, double maxfitness, double minfitness, double prom, poblacion &pob);
+       void yaml_ImprimirGen(int generac, double maxfitness, double minfitness, double prom, poblacion &pob);
+       
+       // IMPRIMIR datos de individuo en TXT
+       // void Imprimir(double *fitness, int generac, int indiv, cromosoma genes);       
+       void ImprimirCromo(individuo johndoe, int generac, int indiv, bool new_front);
+       void yaml_ImprimirCromo(individuo johndoe, int generac, int indiv, bool new_front);
+       void ImprimirCromoForTest(individuo johndoe, bool append);
+       
+       // Buscar mejor individuo e IMPRIMIR en TXT
+       void ImprimirFrente(poblacion &inPOB, int generac, double max_fit, bool onlyBest, bool yaml);
        
        // FUNCION AUXILIAR PARA IMPRIMIR ALGUN TIPO DE NOTIFICACION EN EL ARCHIVO DE RESULTADOS
        void Notificar(string notify);
@@ -171,7 +174,7 @@ public:
        void CalcularDistancias(poblacion &inPOB, bool operador_diversidad);
        
        // DETENER EL ALGORITMO???
-       void Terminar(int nproc, int lcrom);
+       void Terminar(int nproc, int lcrom, bool txt);
 };
 
 
@@ -182,12 +185,12 @@ public:
 
 
 //===================================================================
-resultado AG::resultados(poblacion &inPOB)
+statistics AG::estadisticas(poblacion &inPOB)
 {
    int j;
    float acum;
 
-   resultado result;
+   statistics result;
 
    acum = inPOB.individuos[0].Fitness;
 
@@ -224,8 +227,6 @@ resultado AG::resultados(poblacion &inPOB)
 
 }
 //===================================================================
-
-
 
 
 
@@ -304,6 +305,7 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
     // En este caso se hace un muestreo de los individuos que estan en el frente
     for (j=0;j<pobvieja.tampob;j++)
     {      
+        pobvieja.individuos[j].edad++;
         if (pobvieja.individuos[j].rango==pobvieja.individuos[punto].rango) 
         {
               new_Elite.push_back(j);
@@ -357,41 +359,27 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
         pobnueva.individuos[i] = pobvieja.individuos[seleccion(pobvieja.tampob, sumaptitud, &pobvieja, seltype)];
  
     cromosoma newbie1, newbie2;
-
-    int mutcount=0;
     
-    while ( j < pobvieja.tampob ) // do
+    while ( j < pobvieja.tampob )
     {
         mate1 = seleccion(pobvieja.tampob, sumaptitud, &pobvieja, seltype);
         mate2 = seleccion(pobvieja.tampob, sumaptitud, &pobvieja, seltype);
 
         newbie1 = mutacion(pobvieja.individuos[mate1].crom, pmutacion, mutatype, pobnueva.NMutas);
         newbie2 = mutacion(pobvieja.individuos[mate2].crom, pmutacion, mutatype, pobnueva.NMutas);
-
-        mutcount=0;
-        for (int r=0;r<pobvieja.lcrom;r++){
-            if (newbie1[r] != pobvieja.individuos[mate1].crom[r]){
-                mutcount = mutcount+1;
-            }    
-        }  
-
-        mutcount=0;
-        for (int r=0;r<pobvieja.lcrom;r++){
-            if (newbie2[r] != pobvieja.individuos[mate2].crom[r]){
-                mutcount = mutcount+1;
-            }    
-        }    
     
         if (j<(pobvieja.tampob-1)) cruza(newbie1, newbie2, &pobnueva.individuos[j].crom, &pobnueva.individuos[j+1].crom, pobvieja.lcrom, pcruza);
         else  cruza(newbie1, newbie2, &pobnueva.individuos[j].crom, &pobnueva.individuos[j].crom, pobvieja.lcrom, pcruza);
 
         pobnueva.individuos[j].padre1 = mate1;
         pobnueva.individuos[j].padre2 = mate2;
+        pobnueva.individuos[j].edad = 0;
 
         if (j<(pobvieja.tampob-1))
         {
             pobnueva.individuos[j+1].padre1 = mate2;
             pobnueva.individuos[j+1].padre2 = mate1;
+            pobnueva.individuos[j+1].edad = 0;
         }
 
         j = j + 2;
@@ -483,8 +471,6 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
     }
   
     CalcularFitness(pobnueva);
-
-    ImprimirFrente(pobnueva, gen, max, false);
     
     double caux=0.0;
     for (i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
@@ -517,8 +503,10 @@ double AG::distancia(individuo indiv_x, individuo indiv_y, int in_cromlen, short
     
     if (dist_opt==0) 
     {
-        for (int r=0;r<in_cromlen;r++) 
-            if (indiv_x.crom[r]!=indiv_y.crom[r]) dist=dist+1.0;     
+        for (int r=0;r<in_cromlen;r++) {
+            // if (indiv_x.crom[r]!=indiv_y.crom[r]) dist=dist+1.0;     
+            dist = dist + abs(indiv_x.crom[r]-indiv_y.crom[r]);      
+        }    
         // dist = sqrt(dist/in_cromlen);  
         dist = (dist/in_cromlen); 
        
@@ -526,7 +514,8 @@ double AG::distancia(individuo indiv_x, individuo indiv_y, int in_cromlen, short
     {
         for (int r=0;r<nObjctvs;r++)
         {
-            aux = (indiv_x.aptitud[r]-indiv_y.aptitud[r]) / (aptitud_max[r]-aptitud_min[r]);
+            // aux = (indiv_x.aptitud[r]-indiv_y.aptitud[r]) / (aptitud_max[r]-aptitud_min[r]);
+            aux = (indiv_x.aptitud[r]-indiv_y.aptitud[r]); 
             dist = dist + fabs(aux);
         }
         // dist = sqrt(dist/nObjctvs);
@@ -591,6 +580,7 @@ void AG::CalcularDistancias(poblacion &inPOB, bool operador_diversidad)
                 if (nch==0) nch=1;
                 for (k=0;k<nch;k++)
                 inPOB.individuos[j].crom[idx[k]] = !inPOB.individuos[j].crom[idx[k]];
+                inPOB.individuos[j].edad = 0;
             }
             
             distance = distancia(inPOB.individuos[i],inPOB.individuos[j],inPOB.lcrom,nObjctvs,dist_opt);
@@ -619,7 +609,23 @@ void AG::CalcularFitness(poblacion &inPOB)
     // recalcular segun reglas del MOGA
     // calculo el rango r(x,t) para cada individuo
     int i, k, j, mxrango=0;
-    double acum;
+    double acum;    
+    
+    inPOB.histograma = std::vector<short>(inPOB.lcrom,0); // inicializo con ceros
+    
+    for (j=0;j<inPOB.tampob;j++)
+    {
+       inPOB.individuos[j].nF = 0;
+       for (i=0;i<inPOB.lcrom;i++) {
+           if (inPOB.individuos[j].crom[i]) {
+               inPOB.individuos[j].nF++;
+               inPOB.histograma[i]++; 
+           }
+       }    
+                   
+       inPOB.individuos[j].R1 = 1.0 - pow(pow((1.0 - inPOB.individuos[j].aptitud[0]),2.0) + pow((1.0 - inPOB.individuos[j].aptitud[1]),2.0), 0.5);
+       inPOB.individuos[j].R2 = inPOB.individuos[j].aptitud[0]/inPOB.individuos[j].nF;              
+    }    
     
     bool flag1, flag2;
     for (j=0;j<inPOB.tampob;j++)
@@ -728,7 +734,6 @@ void AG::CalcularFitness(poblacion &inPOB)
     
     for (j=0;j<inPOB.tampob;j++)
     {           
-        // for (i=j;i<inPOB.tampob;i++)
         inPOB.individuos[j].mean_dist = 0.0;
         for (i=0;i<inPOB.tampob;i++)
         {   
@@ -736,12 +741,12 @@ void AG::CalcularFitness(poblacion &inPOB)
             if ((inPOB.individuos[i].rango == inPOB.individuos[j].rango)&&(i!=j)) {
                inPOB.individuos[i].nr++; // numero de individuos que comparten el rango               
                acum = sharing_fun(inPOB.individuos[i].distancias[j], sigma_share, alfa_share);
-               inPOB.individuos[i].ncount = inPOB.individuos[i].ncount + acum; // nc(x,t)
-               
-               inPOB.individuos[j].mean_dist += inPOB.individuos[j].distancias[i];               
+               inPOB.individuos[i].ncount = inPOB.individuos[i].ncount + acum; // nc(x,t)               
+               // inPOB.individuos[j].mean_dist += inPOB.individuos[j].distancias[i];               
             }            
-            //inPOB.individuos[j].mean_dist += inPOB.individuos[j].distancias[i];
+            inPOB.individuos[j].mean_dist += inPOB.individuos[j].distancias[i];
         }
+        inPOB.individuos[j].mean_dist = inPOB.individuos[j].mean_dist/inPOB.tampob;
     }
   
     nk.resize(mxrango);
@@ -913,7 +918,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
     unsigned Nf,Ns=0; j=0;
     while ((Ns<Nsubpobs)&&(j<pobnueva.tampob)) {   
         Nf = Verificar(&pobnueva.individuos[indice[j]]);
-        if (Nf>1){
+        if (Nf>=1){
            elegidos.push_back(indice[j]);
            Ns++;
         }   
@@ -974,6 +979,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
             subpob[j].individuos[i].crom.resize(subpob[j].lcrom);
             subpob[j].individuos[i].index.resize(0);
             subpob[j].individuos[i].aptitud.resize(nObjctvs);
+            subpob[j].individuos[i].edad = 0;
             // subpob[j].individuos[i].distancias.resize(tamSubPob);
             
             for (k=0;k<pobnueva.lcrom;k++) { 
@@ -1038,6 +1044,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
                        pobnueva.individuos[elegidos[j]].crom[elegido.index[k]] = 1;  // en realidad no seria necesario
                     else
                        pobnueva.individuos[elegidos[j]].crom[elegido.index[k]] = 0;
+                    pobnueva.individuos[elegidos[j]].edad = 0;
                 }
                 
                 cout << "Generacion " << gen << ", SubPob "<< j+1 << " Reemplazo! " << endl;
@@ -1063,6 +1070,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
         auxiliar.crom.resize(pobnueva.lcrom);
         auxiliar.aptitud.resize(nObjctvs);
         auxiliar.Fitness = 0;
+        auxiliar.edad = 0;
         int original_tampob=pobnueva.tampob, icount=pobnueva.tampob;
         //  CREO SUPER-POBLACION
         for (j=0;j<Nsubpobs;j++) {
@@ -1463,33 +1471,31 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
      
      string filename;     
      
-     filename = SETTINGS.get_str("Filename");
-     
-     if (filename.compare("None") == 0){
-     
-      if (nsubpob>0)
-          filename = folder+"/"+"MOELIGA+Subpobs_results_"+fecha+ string_aux_filename +".txt";
-      else
-          filename = folder+"/"+"MOELIGA_results_"+fecha+ string_aux_filename +".txt";
+     if (nsubpob>0) 
+     {
+          filename  = folder+"/"+"MOELIGA+Subpobs_results_"+fecha+ string_aux_filename +".txt";
+          crom_file = folder+"/"+"MOELIGA+Subpobs_results_"+fecha+ string_aux_filename +".crom";
+          yaml_file = folder+"/"+"MOELIGA+Subpobs_results_"+fecha+ string_aux_filename +".train";
+     } else 
+     {
+          filename  = folder+"/"+"MOELIGA_results_"+fecha+ string_aux_filename +".txt";
+          crom_file = folder+"/"+"MOELIGA_results_"+fecha+ string_aux_filename +".crom";
+          yaml_file = folder+"/"+"MOELIGA_results_"+fecha+ string_aux_filename +".train";
      }
      
-     if (nsubpob>0)
-          crom_file = folder+"/"+"MOELIGA+Subpobs_results_"+fecha+ string_aux_filename +".crom";
-     else
-          crom_file = folder+"/"+"MOELIGA_results_"+fecha+ string_aux_filename +".crom";
-     
-     
      res_file = filename;
+     /*
      filename.insert(0," > ");
      filename.insert(0,cfg_settings.c_str());     
      filename.insert(0,"cat ");
      system(filename.c_str());
+     */
 
      aptitud_min.resize(nObjctvs);
      aptitud_max.resize(nObjctvs);
      for (i=0;i<nObjctvs;i++){
-         aptitud_min[i]=0.0;
-         aptitud_max[i]=0.0;
+         aptitud_min[i]=__DBL_MAX__;
+         aptitud_max[i]=__DBL_MIN__;
      }
      // Inicializacin de los vectores:
      pobnueva.individuos.resize(pobnueva.tampob);
@@ -1505,6 +1511,7 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
          pobvieja.individuos[i].crom.resize(pobvieja.lcrom);
          pobvieja.individuos[i].aptitud.resize(nObjctvs);
          pobnueva.individuos[i].aptitud.resize(nObjctvs);
+         pobnueva.individuos[i].edad = 0;
          // pobnueva.individuos[i].distancias.resize(pobvieja.tampob);
          // pobvieja.individuos[i].distancias.resize(pobvieja.tampob);
      }
@@ -1555,7 +1562,7 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
      j = 0;
      while (j<pobvieja.tampob)
      {
-          nf = Verificar(&pobvieja.individuos[j]);
+          
           for (i=0;((i<nproc)&&(j<pobvieja.tampob));i++)
           {              
              if (stepped_activ) { 
@@ -1569,6 +1576,7 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
              {
                 pobvieja.individuos[j].crom = initcrom(pobvieja.lcrom, activ_rate);                                     // new init
              }
+             nf = Verificar(&pobvieja.individuos[j]);
                            
              pobvieja.individuos[j].padre1 = 0;
              pobvieja.individuos[j].padre2 = 0;
@@ -1621,17 +1629,10 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
         }
     }
     
-    /*
-    for (j=0;j<tampob;j++){
-       nf = Verificar(&pobvieja.individuos[j]);
-       cout << ">> gen " << gen <<  " indiv " << j << " aptitud 1: " << pobvieja.individuos[j].aptitud[1]  << " | " << 1 -((float) nf)/lcrom  << " | " << nf << "  ||  " << pobvieja.individuos[j].aptitud[1]  -  (1 -((float) nf)/lcrom)  << endl;    
-    }   
-    */
     
     CalcularDistancias(pobvieja, false); // son individuos "recien creados" -> no es necesario aplicar operador_diversidad
     CalcularFitness(pobvieja);
     
-    ImprimirFrente(pobvieja, gen, max, false);
 
     return;
 
@@ -1886,6 +1887,7 @@ unsigned AG::Verificar(individuo *JohnDoe)
     for (unsigned j=0;j<indiv.crom.size(); j++){
         if (indiv.crom[j]) nf++;
     }
+    indiv.nF = nf;
     
     if (nf==0)
     {
@@ -1893,6 +1895,8 @@ unsigned AG::Verificar(individuo *JohnDoe)
        rand_gen = (rand() % indiv.crom.size());
        indiv.crom[rand_gen] = true; 
        nf++;
+       indiv.nF = nf;
+       indiv.edad = 0;
     }
     
     return nf;
@@ -1921,27 +1925,26 @@ unsigned AG::Verificar(cromosoma *JohnDoe)
 }
 
 
+void AG::ImprimirCromoForTest(individuo johndoe, bool append)
+{
+    // guardo los cromosoma en archivo separado para correr los tests
+    
+    ofstream best_crom;
+    if (!append) best_crom.open(crom_file.c_str(), ofstream::out | ofstream::trunc);
+    else best_crom.open(crom_file.c_str(), ofstream::out | ofstream::app); 
+    
+    for (int i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) best_crom << i+1 << " ";
+    best_crom << endl;     
+    
+    best_crom.close();     
+    
+}
 
 
-
-void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onlyBest)
+void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onlyBest, bool yaml)
 {
     unsigned best_j = 0;
-    
-    /*
-    for (unsigned j=0;j<inPOB.individuos.size();j++) 
-        if (best_fit < inPOB.individuos[j].Fitness) best_fit = inPOB.individuos[j].Fitness;
-    */
     short cnt = 0;
-/*    
-    for (unsigned j=0;j<inPOB.individuos.size();j++) 
-        if (best_fit == inPOB.individuos[j].Fitness){
-            
-              if (cnt>0) ImprimirCromo(inPOB.individuos[j], generac, j, false, inPOB.lcrom);
-              else ImprimirCromo(inPOB.individuos[j], generac, j, true), inPOB.lcrom;
-              cnt++;
-        }
-*/
 
     int aux_rank=inPOB.tampob;
     for (unsigned j=0;j<inPOB.individuos.size();j++) 
@@ -1951,57 +1954,60 @@ void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onl
         }    
     } 
     
-    if (!onlyBest) {
-        for (unsigned j=0;j<inPOB.individuos.size();j++){ 
-            if (aux_rank == inPOB.individuos[j].rango)  {
-                //if ((aux_rank == inPOB.individuos[j].rango) || (generac==maxgen)) {  // for debugging                    
-                    if (cnt>0) ImprimirCromo(inPOB.individuos[j], generac, j, false, inPOB.lcrom);
-                    else ImprimirCromo(inPOB.individuos[j], generac, j, true, inPOB.lcrom);
+    for (unsigned j=0;j<inPOB.individuos.size();j++)
+    { 
+            if (aux_rank == inPOB.individuos[j].rango)
+            {        
+                    if (yaml) 
+                    {
+                        if (cnt>0) yaml_ImprimirCromo(inPOB.individuos[j], generac, j, false);
+                        else yaml_ImprimirCromo(inPOB.individuos[j], generac, j, true);
+                    } 
+                    else 
+                    {                       
+                        if (cnt>0) ImprimirCromo(inPOB.individuos[j], generac, j, false);
+                        else ImprimirCromo(inPOB.individuos[j], generac, j, true);
+                    }
+                    
+                    if (!onlyBest) 
+                    {
+                        if (cnt>0) ImprimirCromoForTest(inPOB.individuos[j], true);
+                        else ImprimirCromoForTest(inPOB.individuos[j], false);
+                    }
                     cnt++;
             }  
-        }    
-    }
+    }    
     
     if (onlyBest) {
          int nc = 0, Best = 0;
-         double dist = __DBL_MAX__, aux=0.0;
-        
+         double dist = 0.0, aux=0.0;
          
-         for (unsigned j=0;j<inPOB.individuos.size();j++){ 
-            if (aux_rank == inPOB.individuos[j].rango)  {
-
+         for (unsigned j=0;j<inPOB.individuos.size();j++)
+         { 
+            if (aux_rank == inPOB.individuos[j].rango)  
+            {
                  if (Rfun==1) 
                  {    
-                     aux = pow(pow((1.0 - inPOB.individuos[j].aptitud[0]),2.0) + pow((1.0 - inPOB.individuos[j].aptitud[1]),2.0), 0.5); // r1
+                     aux = inPOB.individuos[j].R1;
                      
                  } else { // if (Rfun==2) // por omision
-                   
-                     nc = 0;
-                     for (int i=0;i<inPOB.lcrom;i++)
-                         if (inPOB.individuos[j].crom[i]) nc++;
                          
-                     aux = 1.0 - inPOB.individuos[j].aptitud[0] / nc;                                                                  // r2                    
-                 }    
-                 
-                 
-                   
-                 if (aux<dist) {
+                     aux = inPOB.individuos[j].R2;
+                 }                       
+                 if (aux>dist) {  // maximizar R1 o R2
                      dist = aux;
                      Best = j;
                  }                    
             }  
         }
-        ImprimirCromo(inPOB.individuos[Best], generac, -10, true, inPOB.lcrom);
+
+        ImprimirCromoForTest(inPOB.individuos[Best], false);
     
-    }
-    
+    }    
     
 }
 
-
-
-
-
+//===================================================================
 
 
 
@@ -2010,72 +2016,81 @@ void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onl
 
 
 //===================================================================
-
-//===================================================================
-void AG::ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront, int lcrom)
+void AG::ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront)
 {
-    if (indiv>=0) {
-    
-        indiv++; // empezaba en 0 y queda mas lindo que empieze en 1
-        
-        // Al archivo resultag.txt
-        string filename = res_file;
-        if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);
-        
-        results << endl;
-        results << "::> Generacion: " << generac << endl;
-        results << "::> Individuo: " << indiv << endl;
-        results << "::> Coeficientes Seleccionados: " <<  endl;
-        
-        int nc = 0;
-        for (int i=0;i<lcrom;i++)
-            {
-                if (johndoe.crom[i])
-                {
-                results << i+1 << " ";
-                nc++;
-                }
-            }
-        results << endl;
-        results << "::> Numero Coeficientes Seleccionados: " << nc << endl;
-        results << "::> Fitness: " << johndoe.Fitness << endl;
-        results << "::> Shared Fitness: " << johndoe.sFitness << endl;
-        results << "::> Rank: " << johndoe.rango << endl;
-        for (int i=0;i<(nObjctvs);i++)
-            results << "::> Objetivo " << i <<": "  << johndoe.aptitud[i] << endl;
-       
-        double r1 = 1.0 - pow(pow((1.0 - johndoe.aptitud[0]),2.0) + pow((1.0 - johndoe.aptitud[1]),2.0), 0.5);
-        double r2 = johndoe.aptitud[0]/nc;
+     indiv++; 
+     
+     if (!results.is_open()) results.open(res_file.c_str(), ofstream::out | ofstream::app);
+     
+     results << endl;
+     results << "::> Generacion: " << generac << endl;
+     results << "::> Individuo: " << indiv << endl;
+     results << "::> Coeficientes Seleccionados: " <<  endl;
+     for (int i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) results << i+1 << " ";        
+     results << endl;
+     results << "::> Numero Coeficientes Seleccionados: " << johndoe.nF << endl;
+     results << "::> Fitness: " << johndoe.Fitness << endl;
+     results << "::> Shared Fitness: " << johndoe.sFitness << endl;
+     results << "::> Rank: " << johndoe.rango << endl;
+     for (int i=0;i<(nObjctvs);i++)
+         results << "::> Objetivo " << i <<": "  << johndoe.aptitud[i] << endl;
 
-        results << "::> Medida para elegir el mejor R1: " << r1 << endl;
-        results << "::> Medida para elegir el mejor R2: " << r2 << endl;
-        
-        results.close();
-        
-        // guardo los cromosoma en archivo separado para correr los tests
-        
-        ofstream best_crom;
-        if (newfront) best_crom.open(crom_file.c_str(), ofstream::out | ofstream::trunc);
-        else best_crom.open(crom_file.c_str(), ofstream::out | ofstream::app); 
-        
-        for (int i=0;i<lcrom;i++) if (johndoe.crom[i]) best_crom << i+1 << " ";
-        best_crom << endl;     
-        
-        best_crom.close();     
+     results << "::> Medida para elegir el mejor R1: " << johndoe.R1 << endl;
+     results << "::> Medida para elegir el mejor R2: " << johndoe.R2 << endl;
      
-     }
+     results.close();
      
-     if (indiv<0) {
-     
-        ofstream best_crom;
-        best_crom.open(crom_file.c_str(), ofstream::out | ofstream::trunc);
-                
-        for (int i=0;i<lcrom;i++) if (johndoe.crom[i]) best_crom << i+1 << " ";
-        best_crom << endl;     
-        
-        best_crom.close();     
-         
-     }
+     return;
+}
+
+//===================================================================
+
+
+
+
+
+//===================================================================
+void AG::yaml_ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront)
+{   
+     indiv++;
+
+     if (!results.is_open()) results.open(yaml_file.c_str(), ofstream::out | ofstream::app);
+
+     if (newfront) 
+     {    
+         results << "  #===================================" << endl;
+         results << "  FRENTE_DE_PARETO:" << endl << endl;
+     }        
+     results << "  #---------------" << endl;
+     results << "   - INDIVIDUO: "  << indiv << endl;
+     results << "     GENERACION: " << generac << endl;
+     results << "     NUMERO_COEFICIENTES_SELECCIONADOS: " << johndoe.nF << endl;
+     /*
+     results << "     COEFICIENTES_SELECCIONADOS: [";
+     bool fflag = false;
+     for (int i=0;i<johndoe.crom.size();i++) 
+         if (johndoe.crom[i]) {                
+             if (fflag) results << ", ";                
+             results << i+1;
+             fflag = true;                                 
+         }               
+     results << "]" << endl;
+     */
+     results << "     FITNESS: " << johndoe.Fitness << endl;
+     results << "     SHARED_FITNESS: " << johndoe.sFitness << endl;
+     results << "     RANK: " << johndoe.rango << endl;        
+     results << "     RANK_COUNT: " << johndoe.nr << endl;
+     results << "     AGE: " << johndoe.edad << endl;
+     results << "     MEAN_DISTANCE: " << johndoe.mean_dist << endl;
+     results << "     NICHE_COUNT: " << johndoe.ncount << endl;        
+     results << "     MEDIDA_PARA_ELEGIR_EL_MEJOR_R1: " << johndoe.R1 << endl;
+     results << "     MEDIDA_PARA_ELEGIR_EL_MEJOR_R2: " << johndoe.R2 << endl;
+     results << "     OBJETIVOS: [";        
+     for (int i=0;i<nObjctvs;i++) {
+         results << johndoe.aptitud[i];
+         if (i<(nObjctvs-1)) results << ", "; else results << "]" << endl << endl;
+     }            
+     results.close();
      
      return;
 }
@@ -2094,9 +2109,8 @@ void AG::ImprimirGen(int generac, double maxfitness, double minfitness, double p
 
       time ( &rawtime );
       timeinfo = localtime ( &rawtime );
-      
-      string filename = res_file;
-      if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);
+
+      if (!results.is_open()) results.open(res_file.c_str(), ofstream::out | ofstream::app);
       
       double caux=0.0;
       for (short i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
@@ -2124,9 +2138,134 @@ void AG::ImprimirGen(int generac, double maxfitness, double minfitness, double p
 
 
 
+//===================================================================
+
+void AG::yaml_ImprimirGen(int gener, double maxfitness, double minfitness, double prom, poblacion &inPOB)
+{
+      time_t rawtime;
+      struct tm * timeinfo;
+
+      time ( &rawtime );
+      timeinfo = localtime ( &rawtime );
+
+      if (!results.is_open()) results.open(yaml_file.c_str(), ofstream::out | ofstream::app);
+      
+      double caux=0.0;
+      for (short i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
+      caux=caux/clusters.size();         
+          
+      
+      results << "#####################################"  << endl;
+      results << "- GENERATION: " << gener << endl << endl;
+      results << "  #===================================" << endl;
+      results << "  GENERAL:" << endl << endl;
+      results << "   NUMERO_COEFICIENTES_SELECCIONADOS: [";
+      for (short i=0;i<inPOB.tampob;i++) {      
+           results << inPOB.individuos[i].nF;
+           if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+      }    
+      results << "   FITNESS: [";
+      for (short i=0;i<inPOB.tampob;i++) {      
+           results << inPOB.individuos[i].Fitness;
+           if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+      } 
+      results << "   SHARED_FITNESS: [";
+      for (short i=0;i<inPOB.tampob;i++) {      
+           results << inPOB.individuos[i].sFitness;
+           if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+      } 
+      results << "   DISTANCIAS_MEDIAS: [";
+      for (short i=0;i<inPOB.tampob;i++) {      
+           results << inPOB.individuos[i].mean_dist;
+           if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+      } 
+      results << "   RANK: [";
+      for (short i=0;i<inPOB.tampob;i++) {      
+           results << inPOB.individuos[i].rango;
+           if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+      } 
+      results << "   NICHE_COUNT: [";
+      for (short i=0;i<inPOB.tampob;i++) {      
+           results << inPOB.individuos[i].ncount;
+           if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+      }       
+      results << "   OBJETIVO_0: [";
+      for (short i=0;i<inPOB.tampob;i++) {      
+           results << inPOB.individuos[i].aptitud[0];
+           if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+      }       
+      if (nObjctvs>1) {
+        results << "   OBJETIVO_1: [";
+        for (short i=0;i<inPOB.tampob;i++) {      
+            results << inPOB.individuos[i].aptitud[1];
+            if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+        }       
+      }
+      if (nObjctvs>2) {
+        results << "   OBJETIVO_2: [";
+        for (short i=0;i<inPOB.tampob;i++) {      
+            results << inPOB.individuos[i].aptitud[2];
+            if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+        }       
+      }      
+      results << "   MINIMOS_POR_OBJETIVO: [";
+      for (short i=0;i<nObjctvs;i++) {
+          results << aptitud_min[i]; 
+          if (i<(nObjctvs-1)) results << ", "; else results << "]" << endl;
+      }           
+      results << "   MAXIMOS_POR_OBJETIVO: [";
+      for (short i=0;i<nObjctvs;i++) {
+          results << aptitud_max[i]; 
+          if (i<(nObjctvs-1)) results << ", "; else results << "]" << endl;
+      }     
+      
+      results << endl;
+      results << "   MEDIDA_PARA_ELEGIR_EL_MEJOR_R1: [";
+      for (short i=0;i<inPOB.tampob;i++) {      
+           results << inPOB.individuos[i].R1;
+           if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+      }        
+      results << "   MEDIDA_PARA_ELEGIR_EL_MEJOR_R2: [";
+      for (short i=0;i<inPOB.tampob;i++) {      
+           results << inPOB.individuos[i].R2;
+           if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
+      }        
+      results << "   NUMERO_DE_VECES_QUE_SE_ELIGE_CADA_FEATURE: [";
+      for (short i=0;i<inPOB.lcrom;i++) {      
+           results << inPOB.histograma[i];
+           if (i<(inPOB.lcrom-1)) results << ", "; else results << "]" << endl;
+      }        
+      results << endl;
+      results << "   CANTIDAD_DE_MUTACIONES: " << inPOB.NMutas << endl;
+      // results << "   DISTANCIA_MEDIA_POBLACIONAL: " << inPOB.mean_dist << endl; // redundante, ya esta el vector
+      results << "   CANTIDAD_DE_CLUSTERS: "  << clusters.size() << endl;
+      results << "   PROMEDIO_CLUSTER: "  << caux << endl;
+      results << endl;
+      
+      double total_elapsed = global_toc();      
+      results << "   TOTAL_ELAPSED_TIME: " << total_elapsed << endl;
+      results << endl;
+      
+      results.close();
+      
+}      
 
 //===================================================================
-void AG::Terminar(int nproc, int lcrom)
+
+
+
+
+
+
+
+
+
+
+
+
+
+//===================================================================
+void AG::Terminar(int nproc, int lcrom, bool txt)
 {
       int buffer[lcrom];
       int params[3];
@@ -2146,16 +2285,15 @@ void AG::Terminar(int nproc, int lcrom)
           MPI_Send(buffer, lcrom, MPI_INTEGER, i, tag, everyone);
       }
       
-      double total_elapsed = global_toc(); 
-      
-      string filename = res_file;
-      if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);
-      
-      results << " " << endl;
-      results << "TOTAL Time elapsed: " << total_elapsed << endl;
-      results << " " << endl;
-      
-      if (results.is_open()) results.close();
+      if (txt) {
+        double total_elapsed = global_toc();      
+        string filename = res_file;
+        if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);      
+        results << " " << endl;
+        results << "TOTAL Time elapsed: " << total_elapsed << endl;
+        results << " " << endl;      
+        if (results.is_open()) results.close();
+      }
       
       MPI_Finalize();
       
@@ -2174,7 +2312,8 @@ void AG::Terminar(int nproc, int lcrom)
 //#############################################
 int main(int argc, char** argv)
 {
-    string cmd = "mpdallexit; mpdboot; export PATH=$PATH:$PWD";
+    // string cmd = "mpdallexit; mpdboot; export PATH=$PATH:$PWD";
+    string cmd = "mpdboot; export PATH=$PATH:$PWD";
     system(cmd.c_str());
     
     string aux, cfg_settings = "SETTINGS.cfg";
@@ -2263,7 +2402,7 @@ int main(int argc, char** argv)
     
     short count = 0;
     float last_max = 0;
-    resultado result;
+    statistics result;
   
     short nproc = SETTINGS.get_int("NProcesos"); 
     short maxgen = SETTINGS.get_int("Gmax");
@@ -2305,13 +2444,14 @@ int main(int argc, char** argv)
     AlgGen.alfa_share  = SETTINGS.get_dbl("AlfaShare");
     AlgGen.dist_opt = SETTINGS.get_int("dist_opt");
     bool onlyBest = false;
-    onlyBest   = SETTINGS.get_bool("onlyBest");
+    onlyBest = SETTINGS.get_bool("onlyBest");
     AlgGen.activ_rate_sp = SETTINGS.get_dbl("TasaActivacionSubPob");
     AlgGen.ModifyRepeated = SETTINGS.get_bool("ModifyRepeated");
     AlgGen.FitnessOption = SETTINGS.get_int("FitnessOption");
     AlgGen.FitnessNRScale = SETTINGS.get_bool("FitnessNRScale");
     AlgGen.Rfun = SETTINGS.get_int("Rfun");
-    
+    bool yaml = true;
+    yaml = SETTINGS.get_bool("WriteYamlFile");
     
     AlgGen.stepped_activ = SETTINGS.get_bool("TasaActivacionEscalonada");
     if (AlgGen.stepped_activ) {
@@ -2414,10 +2554,11 @@ int main(int argc, char** argv)
     
     // INICIALIZACION DEL ALGORITMO GENETICO
     AlgGen.inicializar(popsize, cromsize , maxgen, pcruza, pmuta, nproc, tasa_activ, cfg_settings);
-    
-
-    result = AlgGen.resultados(AlgGen.pobvieja);
-    AlgGen.ImprimirGen(AlgGen.gen, result.maxfitness, result.minfitness, result.prom, AlgGen.pobvieja);
+    result = AlgGen.estadisticas(AlgGen.pobvieja);    
+            
+    if (yaml) AlgGen.yaml_ImprimirGen(AlgGen.gen, result.maxfitness, result.minfitness, result.prom, AlgGen.pobvieja);
+    else  AlgGen.ImprimirGen(AlgGen.gen, result.maxfitness, result.minfitness, result.prom, AlgGen.pobvieja);
+    AlgGen.ImprimirFrente(AlgGen.pobvieja, AlgGen.gen, result.maxfitness, onlyBest, yaml);
     
     MEASURES.Update(AlgGen.pobvieja, AlgGen.gen); // ACTUALIZO MEDIDAS
     MEASURES.Save(filename, SETTINGS);
@@ -2434,9 +2575,8 @@ int main(int argc, char** argv)
 
         if (muta_expo)
         {
-            // pmuta = (gamma_ini/cromsize)*pow( pow( ( (gamma_fin/cromsize) / (gamma_ini/cromsize) ), (double) (1.0/maxgen)) , (double) AlgGen.gen );  // divido por cromsize despues, segun que tipo de mutacion utilizo             
-            pmuta = gamma_ini*pow( pow( ( gamma_fin / gamma_ini ), (double) (1.0/maxgen)) , (double) AlgGen.gen );
-            // cout << endl << endl << pmuta << endl << endl;
+            // pmuta = (gamma_ini/cromsize)*pow( pow( ( (gamma_fin/cromsize) / (gamma_ini/cromsize) ), (double) (1.0/maxgen)) , (double) AlgGen.gen );            
+            pmuta = gamma_ini*pow( pow( ( gamma_fin / gamma_ini ), (double) (1.0/maxgen)) , (double) AlgGen.gen ); // divido por cromsize despues, segun que tipo de mutacion utilizo   
         }
             
         if (muta_amorti)
@@ -2456,7 +2596,7 @@ int main(int argc, char** argv)
              }             
         }    
 
-        result = AlgGen.resultados(AlgGen.pobnueva);
+        result = AlgGen.estadisticas(AlgGen.pobnueva);
         
         // se controla desde SETTINGS con parametro steady
         if (last_max == result.maxfitness)
@@ -2468,7 +2608,10 @@ int main(int argc, char** argv)
                count = 0; 
         }
         
-        AlgGen.ImprimirGen(AlgGen.gen, result.maxfitness, result.minfitness, result.prom, AlgGen.pobnueva);
+        if (yaml) AlgGen.yaml_ImprimirGen(AlgGen.gen, result.maxfitness, result.minfitness, result.prom, AlgGen.pobnueva);
+        else AlgGen.ImprimirGen(AlgGen.gen, result.maxfitness, result.minfitness, result.prom, AlgGen.pobnueva);
+        
+        AlgGen.ImprimirFrente(AlgGen.pobnueva, AlgGen.gen, result.maxfitness, onlyBest, yaml);
         
         last_max = result.maxfitness;
 
@@ -2483,20 +2626,15 @@ int main(int argc, char** argv)
 
          
     } while ((AlgGen.gen < AlgGen.maxgen) & (count<( (short) AlgGen.maxgen* (((float) steady) / 100)) ));
-
-    
-    // AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom);
-    
-    if (onlyBest) AlgGen.ImprimirFrente(AlgGen.pobnueva, AlgGen.gen, 1.0, true);
     
     // hago el plot de la corrida
+    if (!yaml) {
+       cmd = "python3 Plot4MOELIGA.py ";
+       cmd.insert(cmd.length(), filename); 
+       system(cmd.c_str());
+    } 
     
-    cmd = "python3 Plot4MOELIGA.py ";
-    cmd.insert(cmd.length(), filename); 
-    system(cmd.c_str());
-    
-    // ejecuto el test con TODOS los cromosomas del Frente 
-
+    // ejecuto el test con los cromosomas del Frente 
     cmd = testbin.c_str();
     cmd.insert(cmd.length(), " file "); 
     cmd.insert(cmd.length(), AlgGen.crom_file); 
@@ -2506,12 +2644,18 @@ int main(int argc, char** argv)
     filename.replace(filename.find(".json"),5,".test");
     cmd.insert(cmd.length(), filename); 
     system(cmd.c_str());
+
+    /*
+    cmd = "rm -fr ";
+    cmd.insert(cmd.length(), AlgGen.crom_file); 
+    system(cmd.c_str());
+    */
     
     cmd = "cat ";
     cmd.insert(cmd.length(), filename); 
     system(cmd.c_str());
     
-    AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom);
+    AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom,!yaml);
 
     return 0;
 

@@ -10,7 +10,7 @@
 //  Miércoles 21 Marzo 2012
 //
 // 
-//  USAGE: ./testsvm cromo_GCM.txt cfg gcm_SETTINGS_Test.cfg
+//  USAGE: ./testsvm file cromo_GCM.txt cfg gcm_SETTINGS_Test.cfg
 // 
 //  Leandr0
 //
@@ -203,6 +203,7 @@ int main(int argc, char** argv)
     lcrom = Nfeat;
     pobtype = 0;
     
+    double elapsed = 0;
     
     auto doTest = [&] () {
 
@@ -218,73 +219,66 @@ int main(int argc, char** argv)
        
         aptitud = fitness(cromovect, lcrom, 0, seed, pobtype, alpha, beta, NObjectives); 
         
-        if (salida.compare("labels") != 0){
-           
-           cout << endl << "> Features: "<< feats.size() << endl;
-           
-        }
-        
-        cout << endl;          
-        toc();
-        cout << "============================================="<< endl<< endl;                
 
     };
     
     
     
     int icrom=1;
-    if (argc < 4){
-      
+    if (argc < 4)
+    {
+      cout << "[" << endl;
       for (unsigned j=0;j<Nfeat;j++) feats.push_back(j);
+      cout << " {\"INDIVIDUO\": " << icrom << "," << endl;      
+      cout << "  \"NUMERO_DE_FEATURES\": " << feats.size() << "," << endl;
+      cout << "  \"FEATURES\": " << "[";             
+      for (unsigned j=0;j<feats.size();j++) 
+         if (j < feats.size()-1) cout << feats[j]+1 << ", "; else cout << feats[j]+1 << "],"<< endl;      
       doTest();
+      cout << " }" << endl << "]" << endl;
       
     } else
     {
         // filename = argv[1];
         ifstream features (filename.c_str());
-      
-        /*
-        if (features.is_open())
-        {
-
-          while (features >> aux_int)
-          {
-          aux_int = aux_int-1;  // en la lista que imprime agp el primer elemento es 1, no 0
-          feats.push_back(aux_int);
-          }
-          features.close();
-          
-        } else {
-          
-          for (unsigned j=0;j<Nfeat;j++) feats.push_back(j);
-          
-        }  
-        */
         
         if(!features) {
             cout<<"Couldn't open the file"<<endl;
             exit(1);
         }
         
+        cout << "[" << endl;
+        
         string line;           
         // considero que puede haber varios cromosomas en un mismo archivo, uno por linea, entonces hago el test para cada linea
         while ( getline( features, line )) {
-        
+            
+             if (icrom>1) cout << "," << endl;
+            
+             cout << " {\"INDIVIDUO\": " << icrom << "," << endl;
+             
              feats.resize(0);
              stringstream str(line);
              
-             cout << "Cromo Nr: " << icrom << endl << endl; 
-             
              while (str >> aux_int) {
                  aux_int = aux_int-1;
-                 feats.push_back(aux_int);
-                 // cout << aux_int << " ";
+                 feats.push_back(aux_int);                 
              }             
-             // cout << endl << endl; 
+             
+             cout << "  \"NUMERO_DE_FEATURES\": " << feats.size() << "," << endl;
+             cout << "  \"FEATURES\": " << "[";
+             
+             for (unsigned j=0;j<feats.size();j++) 
+                 if (j < feats.size()-1) cout << feats[j]+1 << ", "; else cout << feats[j]+1 << "],"<< endl;
+             
              doTest();                  
              icrom++;
-         }
-         features.close();   
+             
+             cout << " }";
+             
+       }
+       features.close();   
+       cout << endl << "]" << endl;
       
     }  
     
@@ -512,18 +506,29 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      {
         modelo = train(CFeats, trnD_aux);
         aptitude[1] = test(configs_tst, tstD_aux, modelo, tst_labels);
+        double elapsed = toc2();        
+        cout << "  \"SVM_ELAPSED_TIME\": " << elapsed << endl;
         svm_free_and_destroy_model(&modelo); 
      
      } else if (caseInSensStringCompare(clasificador, str_elm)) 
      {
         aptitude[1] = elm(trnD_aux, tstD_aux, CFeats, elm_params.nhn, elm_params.rf, elm_params.multi, elm_params.nhn_max);
+        double elapsed = toc2();        
+        cout << "  \"ELM_ELAPSED_TIME\": " << elapsed << endl;        
+        
      } else if (caseInSensStringCompare(clasificador, str_ALL))
      {
-        cout << endl<< "::: ELM :::" << endl << endl;
+         
+        double elapsed2, elapsed1 = toc2(); 
+        tic();
         aptitude[1] = elm(trnD_aux, tstD_aux, CFeats, elm_params.nhn, elm_params.rf, elm_params.multi, elm_params.nhn_max); 
-        cout << endl<< "::: SVM :::" << endl << endl;
+        elapsed2 = toc2(); 
+        cout << "  \"ELM_ELAPSED_TIME\": " << elapsed1+elapsed2 << "," << endl; 
+        tic();
         modelo = train(CFeats, trnD_aux);
         aptitude[1] = test(configs_tst, tstD_aux, modelo, tst_labels);
+        elapsed2 = toc2(); 
+        cout << "  \"SVM_ELAPSED_TIME\": " << elapsed1+elapsed2 << endl; 
         svm_free_and_destroy_model(&modelo);          
      }
 
@@ -682,7 +687,7 @@ double elm(struct svm_problem trn_data, struct svm_problem tst_data, int Nfeats,
     // cout << "> ACCURACY: " << acc <<endl;
     
     double UAR = ScoreUAR(mScores, yTest, true);    
-    cout << "> UAR: " << UAR <<endl;
+    cout << "  \"ELM_UAR\": " << UAR  << "," << endl;
     
     return UAR;
 }
@@ -824,11 +829,23 @@ double test(string configs, struct svm_problem datos, struct svm_model *modelo, 
 	    }
 	    UAR = UAR/nclass;
 	    
-	    for (i=0;i<nclass;i++){
-	      for (k=0;k<nclass;k++)
-		  cout << MC[ i ][ k ] << " ";
-		cout << "\n"; }
-	    cout << "> UAR: " << UAR << endl;  
+        cout << "  \"SVM_CONFUSION_MATRIX\": " << "[" ;
+        
+	    for (i=0;i<nclass;i++)
+        {
+          if (i==0) cout << "[";    
+          else cout << "                           " << "[" ;
+                                                    
+	      for (k=0;k<nclass;k++) {
+		      cout << MC[i][k]; 
+              if (k<(nclass-1)) cout << ", ";  
+          }
+          cout << "]";    
+          if (i<(nclass-1)) cout << "," << endl;  
+        }
+        cout << "]," << endl;         
+	    
+	    cout << "  \"SVM_UAR\": " << UAR  << "," << endl;
 	
 	} else {  
 	  

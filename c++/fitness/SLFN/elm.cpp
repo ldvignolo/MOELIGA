@@ -124,13 +124,25 @@ double ScoreUAR(MatrixXd &resData, vector<double> &targetVec, bool mshow) {
     
     if (mshow) 
     {
-       for (short i=0;i<nclass;i++){
-           for (short k=0;k<nclass;k++)
-               cout << MC[ i ][ k ] << " ";
-           cout << "\n";         
-       }
+        cout << "  \"ELM_CONFUSION_MATRIX\": " << "[" ;
+        
+	    for (short i=0;i<nclass;i++)
+        {
+          if (i==0) cout << "[";    
+          else cout << "                           " << "[" ;            
+            
+	      for (short k=0;k<nclass;k++) {
+		      cout << MC[i][k]; 
+              if (k<(nclass-1)) cout << ", ";  
+          }
+          cout << "]";    
+          if (i<(nclass-1)) cout << "," << endl;  
+        }
+        cout << "]," << endl;   
     }
-
+    
+    
+    
     return UAR;
 }
 

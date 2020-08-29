@@ -68,6 +68,13 @@ void toc() {
     tictoc_stack.pop();
 }
 
+double toc2() {
+    
+    double elapsed =  ((double)(clock() - tictoc_stack.top())) / CLOCKS_PER_SEC;
+    tictoc_stack.pop();
+    return elapsed;
+}
+
 
 stack<clock_t> global_tictoc_stack;
 
@@ -85,7 +92,7 @@ double global_toc() {
     
     elapsed = ((double)(clock() - global_tictoc_stack.top())) / CLOCKS_PER_SEC;
               
-    global_tictoc_stack.pop();
+    // global_tictoc_stack.pop();  comento para llamarlo en cada generacion con referencia al mismo push
     
     return elapsed;
 }

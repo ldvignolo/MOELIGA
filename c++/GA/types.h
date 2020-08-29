@@ -25,16 +25,18 @@ class individuo
           double ncount;  // moga niche count
           vector < double > distancias; // moga
           double mean_dist; 
+          double R1, R2;
           fit_vect aptitud;    // moga
           double Fitness;      // moga fitness
           double sFitness;     // moga shared fitness
           int nr;              // moga nro ind con = rango
           int nF;              // number of selected features
           int padre1, padre2;
+          int edad;
 };
 
 
-class resultado
+class statistics
 {
       public:
               float x;
@@ -54,6 +56,7 @@ class poblacion
              double mean_dist;                  // distancia media entre los indidividuos
              short tampob;                      // NUMERO DE INDIVIDUOS EN LA POBLACION
              short Current_Front_Size;
+             vector <short> histograma;         // contador de apariciones de cada feature
 
 };
 
