@@ -530,7 +530,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
         cout << "                     \"ELM\": {" << endl; 
         aptitude[1] = elm(trnD_aux, tstD_aux, CFeats, elm_params.nhn, elm_params.rf, elm_params.multi, elm_params.nhn_max); 
         elapsed2 = toc2(); 
-        cout << "                             \"ELAPSED_TIME\": " << elapsed1+elapsed2 << "," << endl; 
+        cout << "                             \"ELAPSED_TIME\": " << elapsed1+elapsed2 << endl; 
         cout << "                            }," << endl;
         tic();
         modelo = train(CFeats, trnD_aux);
