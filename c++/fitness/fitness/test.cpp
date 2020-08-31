@@ -502,35 +502,46 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
         j++;
      }
      
+     cout << "  \"CLASIFICADORES\": {" << endl;
+     
      if (caseInSensStringCompare(clasificador, str_svm)) 
      {
+        cout << "                     \"SVM\": {" << endl;
         modelo = train(CFeats, trnD_aux);
         aptitude[1] = test(configs_tst, tstD_aux, modelo, tst_labels);
         double elapsed = toc2();        
-        cout << "  \"SVM_ELAPSED_TIME\": " << elapsed << endl;
+        cout << "                             \"ELAPSED_TIME\": " << elapsed << endl;
         svm_free_and_destroy_model(&modelo); 
+        cout << "                            }" << endl;
      
      } else if (caseInSensStringCompare(clasificador, str_elm)) 
      {
+        cout << "                     \"ELM\": {" << endl; 
         aptitude[1] = elm(trnD_aux, tstD_aux, CFeats, elm_params.nhn, elm_params.rf, elm_params.multi, elm_params.nhn_max);
         double elapsed = toc2();        
-        cout << "  \"ELM_ELAPSED_TIME\": " << elapsed << endl;        
+        cout << "                             \"ELAPSED_TIME\": " << elapsed << endl;        
+        cout << "                            }" << endl;
         
      } else if (caseInSensStringCompare(clasificador, str_ALL))
      {
          
         double elapsed2, elapsed1 = toc2(); 
         tic();
+        cout << "                     \"ELM\": {" << endl; 
         aptitude[1] = elm(trnD_aux, tstD_aux, CFeats, elm_params.nhn, elm_params.rf, elm_params.multi, elm_params.nhn_max); 
         elapsed2 = toc2(); 
-        cout << "  \"ELM_ELAPSED_TIME\": " << elapsed1+elapsed2 << "," << endl; 
+        cout << "                             \"ELAPSED_TIME\": " << elapsed1+elapsed2 << "," << endl; 
+        cout << "                            }," << endl;
         tic();
         modelo = train(CFeats, trnD_aux);
+        cout << "                     \"SVM\": {" << endl;
         aptitude[1] = test(configs_tst, tstD_aux, modelo, tst_labels);
         elapsed2 = toc2(); 
-        cout << "  \"SVM_ELAPSED_TIME\": " << elapsed1+elapsed2 << endl; 
+        cout << "                             \"ELAPSED_TIME\": " << elapsed1+elapsed2 << endl; 
+        cout << "                            }" << endl;
         svm_free_and_destroy_model(&modelo);          
      }
+     cout << "                    }" << endl;            
 
      /************************************************************************************/
 
@@ -686,8 +697,8 @@ double elm(struct svm_problem trn_data, struct svm_problem tst_data, int Nfeats,
     // double acc = ScoreAccuracy(mScores, yTest);
     // cout << "> ACCURACY: " << acc <<endl;
     
-    double UAR = ScoreUAR(mScores, yTest, true);    
-    cout << "  \"ELM_UAR\": " << UAR  << "," << endl;
+    double UAR = ScoreUAR(mScores, yTest, true);        
+    cout << "                             \"UAR\": " << UAR  << "," << endl;
     
     return UAR;
 }
@@ -829,12 +840,12 @@ double test(string configs, struct svm_problem datos, struct svm_model *modelo, 
 	    }
 	    UAR = UAR/nclass;
 	    
-        cout << "  \"SVM_CONFUSION_MATRIX\": " << "[" ;
+        cout << "                             \"CONFUSION_MATRIX\": " << "[" ;
         
 	    for (i=0;i<nclass;i++)
         {
           if (i==0) cout << "[";    
-          else cout << "                           " << "[" ;
+          else cout << "                                                  " << "[" ;
                                                     
 	      for (k=0;k<nclass;k++) {
 		      cout << MC[i][k]; 
@@ -845,7 +856,7 @@ double test(string configs, struct svm_problem datos, struct svm_model *modelo, 
         }
         cout << "]," << endl;         
 	    
-	    cout << "  \"SVM_UAR\": " << UAR  << "," << endl;
+	    cout << "                             \"UAR\": " << UAR  << "," << endl;
 	
 	} else {  
 	  

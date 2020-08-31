@@ -124,12 +124,12 @@ double ScoreUAR(MatrixXd &resData, vector<double> &targetVec, bool mshow) {
     
     if (mshow) 
     {
-        cout << "  \"ELM_CONFUSION_MATRIX\": " << "[" ;
+        cout << "                             \"CONFUSION_MATRIX\": " << "[" ;
         
 	    for (short i=0;i<nclass;i++)
         {
           if (i==0) cout << "[";    
-          else cout << "                           " << "[" ;            
+          else cout << "                                                  " << "[" ;            
             
 	      for (short k=0;k<nclass;k++) {
 		      cout << MC[i][k]; 
