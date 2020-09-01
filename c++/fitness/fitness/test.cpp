@@ -230,7 +230,7 @@ int main(int argc, char** argv)
       cout << "[" << endl;
       for (unsigned j=0;j<Nfeat;j++) feats.push_back(j);
       cout << " {\"INDIVIDUO\": " << icrom << "," << endl;      
-      cout << "  \"NUMERO_DE_FEATURES\": " << feats.size() << "," << endl;
+      cout << "  \"NUMERO_COEFICIENTES_SELECCIONADOS\": " << feats.size() << "," << endl;
       cout << "  \"FEATURES\": " << "[";             
       for (unsigned j=0;j<feats.size();j++) 
          if (j < feats.size()-1) cout << feats[j]+1 << ", "; else cout << feats[j]+1 << "],"<< endl;      
@@ -265,7 +265,7 @@ int main(int argc, char** argv)
                  feats.push_back(aux_int);                 
              }             
              
-             cout << "  \"NUMERO_DE_FEATURES\": " << feats.size() << "," << endl;
+             cout << "  \"NUMERO_COEFICIENTES_SELECCIONADOS\": " << feats.size() << "," << endl;
              cout << "  \"FEATURES\": " << "[";
              
              for (unsigned j=0;j<feats.size();j++) 
