@@ -31,6 +31,7 @@
 #include <mlpack/core/data/scaler_methods/standard_scaler.hpp>
 #include <mlpack/core/data/scaler_methods/mean_normalization.hpp>
 #include <mlpack/methods/ann/layer/layer.hpp>
+#include <mlpack/methods/ann/layer/layer_types.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
 #include <mlpack/methods/kmeans/kmeans.hpp>
 // #include <mlpack/methods/decision_stump/decision_stump.hpp>
