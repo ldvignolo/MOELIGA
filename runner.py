@@ -192,7 +192,7 @@ for experiment in experiments:
             _,eliga_settings = os.path.split(args['eliga_settings'])
             current_path = os.path.join(output_folder, eliga_settings)
             #full_path = os.path.abspath(current_path)
-            os.system('./agp cfg {}'.format(current_path))
+            os.system('./bin/agp cfg {}'.format(current_path))
             
             
             #·····································
