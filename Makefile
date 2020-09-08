@@ -6,7 +6,8 @@
 #   mpdboot -n 1
 #   ./agp npr 2 </dev/null &
 # 
-#   scl enable devtoolset-3 bash
+# - Dependencias libboost mlpack libensmallen armadillo
+# - Ubuntu: sudo apt install libmlpack-dev  libmlpack3 libensmallen-dev libarmadillo9 libarmadillo-dev libboost1.71-dev
 # 
 #-------------------------------------------------------
 
