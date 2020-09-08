@@ -12,6 +12,7 @@
 
 
 all:
+	mkdir -p bin
 	$(MAKE) -C ./c++/GA all
 	mv ./c++/GA/agp bin/
 	$(MAKE) -C ./c++/fitness/ all
