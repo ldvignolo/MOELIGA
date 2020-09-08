@@ -157,7 +157,7 @@ bool Dictionary::get_bool(std::string key)
 int Dictionary::get_int(std::string key)
 {
   
-  int value = std::numeric_limits<int>::max() + 1;
+  int value = std::numeric_limits<int>::max();
   
   std::map<std::string, int>::iterator it;
   

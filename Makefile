@@ -13,8 +13,8 @@
 
 all:
 	$(MAKE) -C ./c++/GA all
-	mv ./c++/GA/agp ./
-	$(MAKE) -C ./c++/fitness/fitness/ all
-	mv ./c++/fitness/fitness/fitness ./
-	mv ./c++/fitness/fitness/test ./
+	mv ./c++/GA/agp bin/
+	$(MAKE) -C ./c++/fitness/ all
+	mv ./c++/fitness/fitness bin/
+	mv ./c++/fitness/test bin/
 

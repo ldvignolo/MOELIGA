@@ -54,6 +54,12 @@ bool caseInSensStringCompare(std::string & str1, std::string &str2)
              std::equal(str1.begin(), str1.end(), str2.begin(), &compareChar) );
 }
 
+bool caseInSensStringCompare(std::string & str1, std::string str2)
+{
+    return ( (str1.size() == str2.size() ) &&
+             std::equal(str1.begin(), str1.end(), str2.begin(), &compareChar) );
+}
+
 
 stack<clock_t> tictoc_stack;
 
@@ -95,6 +101,41 @@ double global_toc() {
     // global_tictoc_stack.pop();  comento para llamarlo en cada generacion con referencia al mismo push
     
     return elapsed;
+}
+
+
+
+vector <string> SplitWords(string strString)
+{
+  int ws=-1,we=-5;
+  unsigned int i = 0;
+  vector <string> words;
+  bool wd=false;
+
+  // Skip over spaces at the beginning of the word
+  while(isspace(strString.at(i)))
+    i++;
+  strString+='.';
+
+  while(i < strString.length())
+  {    
+    if((isspace(strString.at(i)))||(ispunct(strString.at(i))))
+    {      
+      if ((wd)&&(we>=ws)){
+        words.push_back(strString.substr(ws,we-ws+1));
+        wd = false;
+      }
+    }else{
+      if (!wd){
+        ws = i; 
+        we = i;
+        wd=true;
+      } else we=i;        
+    }
+    i++ ;
+  }
+  
+  return words;
 }
 
 
