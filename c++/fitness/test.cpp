@@ -44,7 +44,6 @@
 
 using namespace mlpack;
 using namespace mlpack::tree;
-using namespace mlpack::cv;
 using namespace mlpack::ann;
 using namespace mlpack::kmeans;
 
