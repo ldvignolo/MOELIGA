@@ -22,22 +22,21 @@
 // mlpack includes
 
 #include <mlpack/core.hpp>
-// #include <mlpack/core/cv/k_fold_cv.hpp>
-#include <mlpack/core/cv/simple_cv.hpp>
 #include <mlpack/core/data/split_data.hpp>
 #include <mlpack/methods/random_forest/random_forest.hpp>
 #include <mlpack/methods/linear_svm/linear_svm.hpp>
 #include <mlpack/methods/decision_tree/decision_tree.hpp>
-#include <mlpack/core/cv/metrics/accuracy.hpp>
 #include <mlpack/methods/adaboost/adaboost.hpp>
 #include <mlpack/methods/perceptron/perceptron.hpp>
 #include <mlpack/core/data/scaler_methods/standard_scaler.hpp>
 #include <mlpack/core/data/scaler_methods/mean_normalization.hpp>
 #include <mlpack/methods/ann/layer/layer.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
-#include <mlpack/core/data/one_hot_encoding.hpp>
 #include <mlpack/methods/kmeans/kmeans.hpp>
-#include <mlpack/methods/decision_stump/decision_stump.hpp>
+// #include <mlpack/methods/decision_stump/decision_stump.hpp>
+// #include <mlpack/core/cv/k_fold_cv.hpp>
+// #include <mlpack/core/data/one_hot_encoding.hpp>
+// #include <mlpack/core/cv/metrics/accuracy.hpp>
 
 #include "loadarff.hpp"
 
@@ -70,9 +69,9 @@ using namespace mlpack::kmeans;
 
 #include <mpi.h>
 
-#include "../../GA/types.h"
-#include "../../GA/utils.h"
-#include "../../configs/Toolbox.hpp"   // LECTURA DEL ARCHIVO DE CONFIGURACION
+#include "../GA/types.h"
+#include "../GA/utils.h"
+#include "../configs/Toolbox.hpp"   // LECTURA DEL ARCHIVO DE CONFIGURACION
 
 //--------------------------------------
 
