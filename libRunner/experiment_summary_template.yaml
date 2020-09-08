@@ -1,0 +1,49 @@
+#-----------------------------------------
+ TRAIN: # Acumulados generados al aplicar la estadística por generación
+ 
+  NUMERO_COEFICIENTES_SELECCIONADOS: mean  # SQUEEZING POR GENERACION
+  
+  FITNESS: mean  # SQUEEZING POR GENERACION
+  
+  SHARED_FITNESS: mean  # SQUEEZING POR GENERACION
+  
+  DISTANCIAS_MEDIAS: mean  # SQUEEZING POR GENERACION
+  
+  RANK: mean  # SQUEEZING POR GENERACION
+  
+  NICHE_COUNT: mean  # SQUEEZING POR GENERACION
+  
+  OBJETIVO_0: mean  # SQUEEZING POR GENERACION
+  
+  OBJETIVO_1: mean  # SQUEEZING POR GENERACION
+  
+  OBJETIVO_2: mean  # SQUEEZING POR GENERACION
+  
+  #MINIMOS_POR_OBJETIVO: mean  # SQUEEZING POR GENERACION
+  
+  #MAXIMOS_POR_OBJETIVO: mean  # SQUEEZING POR GENERACION
+  
+  MEDIDA_PARA_ELEGIR_EL_MEJOR_R1: max  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
+  
+  MEDIDA_PARA_ELEGIR_EL_MEJOR_R2: max  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
+  
+  #NUMERO_DE_VECES_QUE_SE_ELIGE_CADA_FEATURE: None  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
+  
+  CANTIDAD_DE_MUTACIONES: None
+  
+  CANTIDAD_DE_CLUSTERS: None
+  
+  PROMEDIO_CLUSTER: None
+  
+  ELAPSED_TIME: sum
+
+#-----------------------------------------
+
+ TEST:
+  
+  CRITERIO: ['R1','R2']
+  
+  MEASURES: ['NUMERO_COEFICIENTES_SELECCIONADOS']
+  
+  CLASIFICADORES:
+   METRICS: ['ACCURACY','UAR','F1_MACRO','F1_WEIGHTED','KAPPA_SCORE']  # GUARDO DATOS CRUDOS # ['CONFUSION_MATRIX','TP','TN','FP','FN','PRECISION','RECALL','SPECIFICITY','ACCURACY','UAR','F1']

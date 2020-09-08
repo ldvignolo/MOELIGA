@@ -1,0 +1,85 @@
+#-----------------------------------------
+ TRAIN: # Acumulados generados al aplicar la estadística por generación
+  
+  OBJETIVO_0:
+   SQUEEZE_CRITERIUM: max  # CRITERIO PARA COMBINAR INFORMACION DE TODAS LAS GENERACIONES (x EXPERIMENTO)
+   STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+
+  OBJETIVO_1:
+   SQUEEZE_CRITERIUM: max  # CRITERIO PARA COMBINAR INFORMACION DE TODAS LAS GENERACIONES (x EXPERIMENTO)
+   STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+
+  OBJETIVO_2:
+   SQUEEZE_CRITERIUM: max  # CRITERIO PARA COMBINAR INFORMACION DE TODAS LAS GENERACIONES (x EXPERIMENTO)
+   STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+  
+  ELAPSED_TIME:
+   SQUEEZE_CRITERIUM: sum  # CRITERIO PARA COMBINAR INFORMACION DE TODAS LAS GENERACIONES (x EXPERIMENTO)
+   STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+
+#-----------------------------------------
+
+ TEST:
+ 
+  MEASURES:
+   NUMERO_COEFICIENTES_SELECCIONADOS:
+    SQUEEZE_CRITERIUM: None  #
+    STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+ 
+  METRICS:
+
+   #CONFUSSION_MATRIX:
+    #SQUEEZE_CRITERIUM: ['mean']  # 'median'
+    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad']
+  
+   #TP:
+    #SQUEEZE_CRITERIUM: ['None']
+    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad']
+    
+   #TN:
+    #SQUEEZE_CRITERIUM: ['None']
+    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad']
+    
+   #FP:
+    #SQUEEZE_CRITERIUM: ['None']
+    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad']
+    
+   #FN:
+    #SQUEEZE_CRITERIUM: ['None']
+    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad']
+    
+   #PRECISION:
+    #SQUEEZE_CRITERIUM: mean  # 'median'
+    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad']
+    
+   #RECALL:
+    #SQUEEZE_CRITERIUM: mean  # 'median'
+    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad']
+    
+   #SPECIFICITY:
+    #SQUEEZE_CRITERIUM: mean  # 'median'
+    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad']
+    
+   #ACCURACY:
+    #SQUEEZE_CRITERIUM: mean  # 'median'
+    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad']
+    
+   UAR:
+    SQUEEZE_CRITERIUM: None
+    STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+    
+   F1_MACRO: # AVERAGE OF F1 PER CLASS
+    SQUEEZE_CRITERIUM: None
+    STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+
+   F1_WEIGHTED: # AVERAGE OF F1 PER CLASS WEIGHTED BY PROPORTION OF EACH CLASS IN THE DATASET
+    SQUEEZE_CRITERIUM: None
+    STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+    
+   KAPPA_SCORE: # MEASURES THE DEGREE OF AGREEMENT BETWEEN REAL AND PREDICTED
+    SQUEEZE_CRITERIUM: None
+    STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+    
+   ELAPSED_TIME:
+    SQUEEZE_CRITERIUM: None  # 'median'
+    STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
