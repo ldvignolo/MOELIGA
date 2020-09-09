@@ -32,6 +32,7 @@
 #include <mlpack/core/data/scaler_methods/standard_scaler.hpp>
 #include <mlpack/core/data/scaler_methods/mean_normalization.hpp>
 #include <mlpack/methods/ann/layer/layer.hpp>
+#include <mlpack/methods/ann/layer/layer_types.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
 #include <mlpack/methods/kmeans/kmeans.hpp>
 // #include <mlpack/methods/decision_stump/decision_stump.hpp>
@@ -40,11 +41,7 @@
 // #include <mlpack/core/cv/metrics/accuracy.hpp>
 
 
-#ifdef CORRECT_MLPACK_VERSION
-  #include "mlpack_3.3.2/layer_types.hpp"
-#else
-  #include <mlpack/methods/ann/layer/layer_types.hpp>
-#endif
+
 
 
 #include "loadarff.hpp"
@@ -485,6 +482,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
      /************************************************************************************/
      
      cout << "  \"CLASIFICADORES\": {" << endl;
+     bool flag;
      
      for (size_t i=0;i<clasificadores.size();i++)
      {    
@@ -494,6 +492,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
          std::transform(clasificador.begin(), clasificador.end(), clasificador.begin(), ::tolower);         
          stringstream geek(clasif_configs[i]);          
          string offset = string(25, ' ');
+         flag = true;
          
          if (clasificador == "svm") 
          {
@@ -631,6 +630,8 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
          {
              cout << offset << "\"RBF\":" << endl;
              
+             #ifdef CORRECT_MLPACK_VERSION
+             
              int par1, par3, par4;
              double par2, par5, par6;
              bool par7;
@@ -648,7 +649,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
              
              // Initialize the network.
              FFN<> model;
-             model.Add<RBF<> >(TRNdataTMP.n_rows, par1, centroids, par2);   // inSize: The number of input units (size_t).
+             model.Add<mlpack::ann::layer_types::RBF<> >(TRNdataTMP.n_rows, par1, centroids, par2);   // inSize: The number of input units (size_t).
                                                                             // outSize: The number of output units (size_t).                                                                            
              model.Add<Linear<> >(par1, numClasses);
              model.Add<LogSoftMax<> >();             
@@ -669,13 +670,19 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
                 output(p) = arma::as_scalar(arma::find(arma::max(pred_one_hot.col(p)) == pred_one_hot.col(p), 1));                 
              }                              
              pred_one_hot.clear();
+             
+             #else
+             
+             flag = false;
+             
+             #endif
 
          }
-         
          
                    
          double elapsed = toc2(); 
          double uar = fUAR(tstLabels,output);         
+         if (!flag) uar = 0;
          arma::mat mc = MC(tstLabels,output);  
          string x_str;
          cout << offset << "{" << endl;

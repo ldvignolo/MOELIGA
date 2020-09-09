@@ -30,6 +30,7 @@
 #include <mlpack/methods/perceptron/perceptron.hpp>
 #include <mlpack/core/data/scaler_methods/standard_scaler.hpp>
 #include <mlpack/core/data/scaler_methods/mean_normalization.hpp>
+#include <mlpack/methods/ann/layer/layer_types.hpp>
 #include <mlpack/methods/ann/layer/layer.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
 #include <mlpack/methods/kmeans/kmeans.hpp>
@@ -37,16 +38,6 @@
 // #include <mlpack/methods/decision_stump/decision_stump.hpp>
 // #include <mlpack/core/data/one_hot_encoding.hpp>
 // #include <mlpack/core/cv/metrics/accuracy.hpp>
-
-#ifdef CORRECT_MLPACK_VERSION
-  #include "mlpack_3.3.2/layer_types.hpp"
-#else
-  #include <mlpack/methods/ann/layer/layer_types.hpp>
-#endif
-
-
-
-
 
 #include "loadarff.hpp"
 
@@ -675,6 +666,9 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                  }                       
                  else if (clasificador == "rbf")
                  {                     
+                     
+                     #ifdef CORRECT_MLPACK_VERSION
+  
                      int par1, par3, par4;
                      double par2, par5, par6;
                      bool par7;
@@ -721,6 +715,12 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      pred_one_hot.clear();
                      
                      cUAR = fUAR(trnLabelsTMP.cols(tstIdx),output);
+                     
+                     #else
+                     
+                     cUAR = 0.0;
+                     
+                     #endif
                      
                  }                      
                  fit_aux = fit_aux + cUAR;                 
