@@ -19,9 +19,8 @@
 
 
 
-OPCIONES=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/ -llapack -lblas -D CORRECT_MLPACK_VERSION  
-OPCIONES3=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/lib/x86_64-linux-gnu/ -llapack -lblas
-
+OPCIONES=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/ -llapack -lblas 
+OPCIONES3=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -I/usr/lib -lboost_serialization -fopenmp -DARMA_DONT_USE_WRAPPER -llapack -lblas -lmlpack -Wl,-rpath=/usr/local/lib 
 
 CXX=g++
 CXY=mpicxx
@@ -29,7 +28,7 @@ OPCIONES2= -std=c++11 -O3  -DMPICH_IGNORE_CXX_SEEK -lpthread -ftree-parallelize-
 
 
 all:
-	${CXX} ${OPCIONES} test.cpp -o test -lc
+	${CXX} ${OPCIONES} test.cpp -o test -lc 
 	${CXY} ${OPCIONES} ${OPCIONES2} fitness.cpp -o fitness -lmpich -lc
 test:
 	${CXX} ${OPCIONES} test.cpp -o test -lc
@@ -38,3 +37,4 @@ fit:
 ubuntu:
 	${CXX} ${OPCIONES3} test.cpp -o test -lc
 	${CXY} ${OPCIONES3} ${OPCIONES2} fitness.cpp -o fitness -lmpich -lc
+

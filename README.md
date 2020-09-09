@@ -10,7 +10,7 @@ Para compilar
 - Recordar que MOELIGA debe compilarse con el mismo compilador que MPICH (y mpd)
 - Dependencias libboost mlpack libensmallen armadillo  libopenblas-dev liblapack-dev 
 - Ubuntu: sudo apt install libmlpack-dev  libmlpack3 libensmallen-dev libarmadillo9 libarmadillo-dev libboost1.71-dev libopenblas-dev liblapack-dev 
-
+          sudo apt-get install libboost-math-dev libboost-test-dev libboost-serialization-dev libarmadillo-dev binutils-dev  libstb-dev
 
 Ejecución
 - mpdboot

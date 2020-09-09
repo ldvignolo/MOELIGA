@@ -666,8 +666,6 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                  }                       
                  else if (clasificador == "rbf")
                  {                     
-                     
-                     #ifdef CORRECT_MLPACK_VERSION
   
                      int par1, par3, par4;
                      double par2, par5, par6;
@@ -714,13 +712,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      }                              
                      pred_one_hot.clear();
                      
-                     cUAR = fUAR(trnLabelsTMP.cols(tstIdx),output);
-                     
-                     #else
-                     
-                     cUAR = 0.0;
-                     
-                     #endif
+                     cUAR = fUAR(trnLabelsTMP.cols(tstIdx),output);                     
                      
                  }                      
                  fit_aux = fit_aux + cUAR;                 

@@ -83,7 +83,7 @@ for experiment in experiments:
     
     for k1,v in zip(names, experiment):
         
-        if (SETTINGS_RUNNER['DEPENDENCIAS'] is not None) or ((k1 in SETTINGS_RUNNER['DEPENDENCIAS'].keys()) and (v == False)):
+        if (SETTINGS_RUNNER['DEPENDENCIAS'] is not None) and ((k1 in SETTINGS_RUNNER['DEPENDENCIAS'].keys()) and (v == False)):
             USAR[k1] = True
             
             for k2 in SETTINGS_RUNNER['DEPENDENCIAS'][k1]:

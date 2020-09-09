@@ -482,7 +482,6 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
      /************************************************************************************/
      
      cout << "  \"CLASIFICADORES\": {" << endl;
-     bool flag;
      
      for (size_t i=0;i<clasificadores.size();i++)
      {    
@@ -492,7 +491,6 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
          std::transform(clasificador.begin(), clasificador.end(), clasificador.begin(), ::tolower);         
          stringstream geek(clasif_configs[i]);          
          string offset = string(25, ' ');
-         flag = true;
          
          if (clasificador == "svm") 
          {
@@ -630,8 +628,6 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
          {
              cout << offset << "\"RBF\":" << endl;
              
-             #ifdef CORRECT_MLPACK_VERSION
-             
              int par1, par3, par4;
              double par2, par5, par6;
              bool par7;
@@ -670,19 +666,12 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
                 output(p) = arma::as_scalar(arma::find(arma::max(pred_one_hot.col(p)) == pred_one_hot.col(p), 1));                 
              }                              
              pred_one_hot.clear();
-             
-             #else
-             
-             flag = false;
-             
-             #endif
 
          }
          
                    
          double elapsed = toc2(); 
          double uar = fUAR(tstLabels,output);         
-         if (!flag) uar = 0;
          arma::mat mc = MC(tstLabels,output);  
          string x_str;
          cout << offset << "{" << endl;
