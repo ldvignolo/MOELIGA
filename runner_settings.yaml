@@ -1,0 +1,7 @@
+---
+ PARAMETERS:
+  Obj2Sigmod: [True, False]
+  SigmLambda: [5.0]
+
+ DEPENDENCIAS:
+  Obj2Sigmod: ['SigmLambda']
