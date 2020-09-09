@@ -649,7 +649,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
              
              // Initialize the network.
              FFN<> model;
-             model.Add<mlpack::ann::layer_types::RBF<> >(TRNdataTMP.n_rows, par1, centroids, par2);   // inSize: The number of input units (size_t).
+             model.Add<RBF<> >(TRNdataTMP.n_rows, par1, centroids, par2);   // inSize: The number of input units (size_t).
                                                                             // outSize: The number of output units (size_t).                                                                            
              model.Add<Linear<> >(par1, numClasses);
              model.Add<LogSoftMax<> >();             

@@ -19,4 +19,10 @@ all:
 	$(MAKE) -C ./c++/fitness/ all
 	mv ./c++/fitness/fitness bin/
 	mv ./c++/fitness/test bin/
-
+ubuntu:
+	mkdir -p bin
+	$(MAKE) -C ./c++/GA all
+	mv ./c++/GA/agp bin/
+	$(MAKE) -C ./c++/fitness/ ubuntu
+	mv ./c++/fitness/fitness bin/
+	mv ./c++/fitness/test bin/

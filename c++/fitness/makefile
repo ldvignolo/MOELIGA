@@ -17,13 +17,10 @@
 # -std=c++11 -I../src/  -L/usr/lib64 -I/usr/include/armadillo_bits/
 # 
 
-LMPVERSION:=$(locate libmlpack.so.3.3)
 
-ifeq ($(strip $(LMPVERSION)),)
-    OPCIONES=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/lib/x86_64-linux-gnu/ -llapack -lblas
-else
-    OPCIONES=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/ -llapack -lblas -D CORRECT_MLPACK_VERSION  
-endif
+
+OPCIONES=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/ -llapack -lblas -D CORRECT_MLPACK_VERSION  
+OPCIONES3=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/lib/x86_64-linux-gnu/ -llapack -lblas
 
 
 CXX=g++
@@ -38,3 +35,6 @@ test:
 	${CXX} ${OPCIONES} test.cpp -o test -lc
 fit:
 	${CXY} ${OPCIONES} ${OPCIONES2} fitness.cpp -o fitness -lmpich -lc
+ubuntu:
+	${CXX} ${OPCIONES3} test.cpp -o test -lc
+	${CXY} ${OPCIONES3} ${OPCIONES2} fitness.cpp -o fitness -lmpich -lc

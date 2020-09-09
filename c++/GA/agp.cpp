@@ -78,7 +78,7 @@ public:
        short maxgen;                           // NUMERO MAXIMO DE GENERACIONES
        short gen;                              // GENERACION ACTUAL              
        short nsubpob;                          // CANTIDAD DE SUBPOBLACIONES       
-       short Elite;                            
+       unsigned Elite;                            
        short dist_opt;                         // medida de distancia para fitness sharing: 0-'variable space', 1-'objective space'
        double alfa;                            
        double sigma_share, alfa_share;         
@@ -279,7 +279,6 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
 
     int i, k, j, mate1, mate2;
     unsigned aux;
-    float acum, seed;
     int punto;
     double sumaptitud=0;
 
@@ -312,8 +311,8 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
         }
     }    
     
-    short rango = pobvieja.individuos[punto].rango+1;
-    while ((new_Elite.size() < Elite) && (rango<pobvieja.tampob))
+    unsigned rango = pobvieja.individuos[punto].rango+1;
+    while ((new_Elite.size() < Elite) && (rango<((unsigned) pobvieja.tampob)))
     {       
         for (j=0;(j<pobvieja.tampob)&&(new_Elite.size()<Elite);j++)
         {      
@@ -327,15 +326,15 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
      
     
     // while (new_Elite.size() > Elite)
-    while (new_Elite.size() > pobvieja.tampob)         
+    while (new_Elite.size() > ((unsigned) pobvieja.tampob))         
     {
         double min_dist = DBL_MAX;
         int jmin=0;
-        for (i=0;i<new_Elite.size();i++)
-            for (j=0;j<new_Elite.size();j++)
-                if ((i!=j) && (min_dist < pobvieja.individuos[new_Elite[i]].distancias[new_Elite[j]])) {
-                    min_dist = pobvieja.individuos[new_Elite[i]].distancias[new_Elite[j]];
-                    jmin = j;
+        for (size_t ii=0;ii<new_Elite.size();ii++)
+            for (size_t jj=0;jj<new_Elite.size();jj++)
+                if ((ii!=jj) && (min_dist < pobvieja.individuos[new_Elite[ii]].distancias[new_Elite[jj]])) {
+                    min_dist = pobvieja.individuos[new_Elite[ii]].distancias[new_Elite[jj]];
+                    jmin = jj;
                 }     
                 
         new_Elite.erase(new_Elite.begin()+jmin);          
@@ -400,11 +399,9 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
     int map[nproc];
     int tag;
     int params[3];
-    unsigned nf;
 
     /*---------------------------------------------*/
 
-    seed = 5;                    // aca no utilizo la semilla
     params[0] = pobvieja.lcrom;  
     params[1] = 0;               // 0 indica pob principal; 1 indica subpob
     params[2] = 1;               // indica si se debe usar el clasificador para evaluar
@@ -416,7 +413,7 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
     j = Elite+brecha; // los valores anteriores de los objetivos sirven, lo que hay que recalcular es el FITNESS
     while (j<pobvieja.tampob)
     {
-       nf = Verificar(&pobnueva.individuos[j]);
+       Verificar(&pobnueva.individuos[j]);
        for (i=0;((i<nproc)&&(j<pobvieja.tampob));i++)
        {
            if  (!busys[i])
@@ -473,7 +470,7 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
     CalcularFitness(pobnueva);
     
     double caux=0.0;
-    for (i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
+    for (size_t ii=0;ii<clusters.size();ii++) caux=caux+clusters[ii].size();
     caux=caux/clusters.size();    
     double fit_aux=0.0; int ibest=0;
     for (i=0;i<pobnueva.tampob;i++)
@@ -608,7 +605,9 @@ void AG::CalcularFitness(poblacion &inPOB)
 {
     // recalcular segun reglas del MOGA
     // calculo el rango r(x,t) para cada individuo
-    int i, k, j, mxrango=0;
+    int i, j, r;
+    unsigned k;
+    unsigned mxrango=0;
     double acum;    
     
     inPOB.histograma = std::vector<short>(inPOB.lcrom,0); // inicializo con ceros
@@ -636,10 +635,10 @@ void AG::CalcularFitness(poblacion &inPOB)
         {    
             // contar las soluciones q dominan a j
             flag1=true; flag2=false;
-            if (i!=j) for (k=0;k<nObjctvs;k++) 
+            if (i!=j) for (r=0;r<nObjctvs;r++) 
             {  
-                if (inPOB.individuos[i].aptitud[k] < inPOB.individuos[j].aptitud[k]) { flag1=false; break; }
-                if (inPOB.individuos[i].aptitud[k] > inPOB.individuos[j].aptitud[k]) flag2=true; 
+                if (inPOB.individuos[i].aptitud[r] < inPOB.individuos[j].aptitud[r]) { flag1=false; break; }
+                if (inPOB.individuos[i].aptitud[r] > inPOB.individuos[j].aptitud[r]) flag2=true; 
             }
             if ((flag1) && (flag2)) inPOB.individuos[j].rango++;  // r(x,t)=1+nq(x,t)
             
@@ -654,18 +653,18 @@ void AG::CalcularFitness(poblacion &inPOB)
     * ---------------------------------------------------------------- */
     
     bool clus_flag1=false;
-    for (int r=0; r<clusters.size();r++) clusters[r].clear();
+    for (size_t r=0; r<clusters.size();r++) clusters[r].clear();
     clusters.clear();    
     
     for (i=0;i<inPOB.tampob;i++)
     {           
         
-        for (int r=0; r<clusters.size();r++)
+        for (size_t r=0; r<clusters.size();r++)
         {
             if (!(std::find(clusters[r].begin(), clusters[r].end(), i) != clusters[r].end()))  // true -> i NO esta en clusters[r]
             {
                 clus_flag1=true;
-                for (int s=0; s<clusters[r].size();s++)
+                for (size_t s=0; s<clusters[r].size();s++)
                     if (0.0==sharing_fun(inPOB.individuos[i].distancias[clusters[r][s]], sigma_share, alfa_share)) clus_flag1=false;
                 if ((clusters[r].size()>0)&&(clus_flag1)) clusters[r].push_back(i);                    
             }
@@ -677,7 +676,7 @@ void AG::CalcularFitness(poblacion &inPOB)
         {                        
             if (0.0<sharing_fun(inPOB.individuos[i].distancias[j], sigma_share, alfa_share))  // sharing>0 <=> distancia<sigma
             {    
-                for (int r=0; r<clusters.size();r++)
+                for (size_t r=0; r<clusters.size();r++)
                 {
                     clus_flag1=false;
                     if ( std::find(clusters[r].begin(), clusters[r].end(), i) != clusters[r].end() )  // true -> i esta en clusters[r]
@@ -685,7 +684,7 @@ void AG::CalcularFitness(poblacion &inPOB)
                         if ( !(std::find(clusters[r].begin(), clusters[r].end(), j) != clusters[r].end()) )  // true -> j NO esta en clusters[r]
                         {
                             clus_flag1=true;
-                            for (int s=0; s<clusters[r].size();s++) // recorro los elementos del cluster r                                
+                            for (size_t s=0; s<clusters[r].size();s++) // recorro los elementos del cluster r                                
                             {    
                                 if (0.0==sharing_fun(inPOB.individuos[j].distancias[clusters[r][s]], sigma_share, alfa_share)) 
                                 { 
@@ -724,7 +723,8 @@ void AG::CalcularFitness(poblacion &inPOB)
     * ---------------------------------------------------------------- */
 
     vector <short> nk;
-    double ax, axc;
+    // double ax;
+    double axc;
     // calcular niche count y fitness
     for (j=0;j<inPOB.tampob;j++)
     {   
@@ -753,7 +753,7 @@ void AG::CalcularFitness(poblacion &inPOB)
     for (k=0;k<mxrango;k++)
     {
         nk[k] = 0;
-        for (i=0;i<inPOB.tampob;i++) if (((int) inPOB.individuos[i].rango) == (k+1)){ nk[k]++; }          
+        for (i=0;i<inPOB.tampob;i++) if (inPOB.individuos[i].rango == (k+1)){ nk[k]++; }          
     }
     
     for (j=0;j<inPOB.tampob;j++)
@@ -761,7 +761,7 @@ void AG::CalcularFitness(poblacion &inPOB)
         // calcular fitness
         axc = 0;
         inPOB.individuos[j].Fitness = inPOB.tampob;
-        for (k=0;k<((int) inPOB.individuos[j].rango-1);k++) 
+        for (k=0;k<(inPOB.individuos[j].rango-1);k++) 
         {            
             // ax = nk[k] - 0.5*(inPOB.individuos[j].nr - 1);
             // axc = axc + std::max(ax,0.0);            
@@ -791,36 +791,36 @@ void AG::CalcularFitness(poblacion &inPOB)
 
     if (FitnessOption==3) 
     {    
-        for (j=0;j<clusters.size();j++)
+        for (size_t jj=0;jj<clusters.size();jj++)
         {
             vector <double> centroide;
             for (i=0;i<inPOB.lcrom;i++)
             {
                 double auxc=0.0;
-                for (k=0;k<clusters[j].size();k++)
+                for (size_t kk=0;kk<clusters[jj].size();kk++)
                 {
-                    auxc = auxc + inPOB.individuos[clusters[j][k]].crom[i];
+                    auxc = auxc + inPOB.individuos[clusters[jj][kk]].crom[i];
                 }
-                auxc = auxc/clusters[j].size();
+                auxc = auxc/clusters[jj].size();
                 centroide.push_back(auxc);
             }
             
             //---------------------------------------
             /*
             int aux=0, i_aux;
-            for (k=0;k<clusters[j].size();k++)
-                if (inPOB.individuos[clusters[j][k]].rango>aux){
-                    aux = inPOB.individuos[clusters[j][k]].rango;
-                    i_aux = k;
+            for (size_t kk=0;kk<clusters[jj].size();kk++)
+                if (inPOB.individuos[clusters[jj][kk]].rango>aux){
+                    aux = inPOB.individuos[clusters[jj][kk]].rango;
+                    i_aux = kk;
                 }
             for (i=0;i<inPOB.lcrom;i++)
-                centroide.push_back(inPOB.individuos[clusters[j][i_aux]].crom[i]); 
+                centroide.push_back(inPOB.individuos[clusters[jj][i_aux]].crom[i]); 
             */
             //---------------------------------------
             
-            for (k=0;k<clusters[j].size();k++)
+            for (size_t kk=0;kk<clusters[jj].size();kk++)
             {            
-                inPOB.individuos[clusters[j][k]].sFitness = inPOB.individuos[clusters[j][k]].sFitness*(1.0 - sharing_fun(distancia(inPOB.individuos[clusters[j][k]], centroide, inPOB.lcrom), sigma_share, alfa_share));
+                inPOB.individuos[clusters[jj][kk]].sFitness = inPOB.individuos[clusters[jj][kk]].sFitness*(1.0 - sharing_fun(distancia(inPOB.individuos[clusters[jj][kk]], centroide, inPOB.lcrom), sigma_share, alfa_share));
             }
             
             centroide.clear();
@@ -850,11 +850,11 @@ void AG::CalcularFitness(poblacion &inPOB)
     }  
  
     inPOB.Current_Front_Size = 0;
-    int aux_rank=inPOB.tampob;
-    for (j=0;j<inPOB.individuos.size();j++) 
-        if (aux_rank > inPOB.individuos[j].rango) aux_rank = inPOB.individuos[j].rango;            
-    for (j=0;j<inPOB.individuos.size();j++) 
-        if (aux_rank == inPOB.individuos[j].rango) inPOB.Current_Front_Size++;  
+    unsigned aux_rank=inPOB.tampob;
+    for (size_t jj=0;jj<inPOB.individuos.size();jj++) 
+        if (aux_rank > inPOB.individuos[jj].rango) aux_rank = inPOB.individuos[jj].rango;            
+    for (size_t jj=0;jj<inPOB.individuos.size();jj++) 
+        if (aux_rank == inPOB.individuos[jj].rango) inPOB.Current_Front_Size++;  
        
     //toc();
     
@@ -915,7 +915,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
 
     if (Nsubpobs>pobnueva.tampob) Nsubpobs = pobnueva.tampob;
     
-    unsigned Nf,Ns=0; j=0;
+    int Nf,Ns=0; j=0;
     while ((Ns<Nsubpobs)&&(j<pobnueva.tampob)) {   
         Nf = Verificar(&pobnueva.individuos[indice[j]]);
         if (Nf>=1){
@@ -1162,8 +1162,8 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
 //===================================================================
 poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutatype, float pmutaSP, int nproc, float imax, short subgen, short maxsubgen, string T_reemplazo, bool sp_c_eval)
 {
-    int i, k, j, mate1, mate2, aux;
-    float acum, seed;
+    int i, k, j, mate1, mate2;
+    unsigned aux;
     int punto, bc = 1;
     poblacion subpobnueva;
     double sumaptitud = 0;
@@ -1269,11 +1269,9 @@ poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutaty
     int map[nproc];
     int tag;
     int params[3];
-    unsigned nf;
 
     /*---------------------------------------------*/
 
-    seed = 5;            // aca no utilizo la semilla
     params[0] = pobnueva.lcrom;  
     params[1] = 1;       // 0 indica pob principal; 1 indica subpob
     params[2] = 0;       // indica si se debe usar el clasificador para evaluar
@@ -1291,7 +1289,7 @@ poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutaty
     
     while (j<SubPob.tampob)
     {
-       nf = Verificar(&subpobnueva.individuos[j]);
+       Verificar(&subpobnueva.individuos[j]);
        for (i=0;((i<nproc)&&(j<SubPob.tampob));i++)
        {
            if  (!busys[i])
@@ -1403,7 +1401,7 @@ poblacion AG::generSubPob(poblacion &SubPob, int brecha, int seltype, int mutaty
        // con reemplazo_padre evaluo el mejor indidividuo (j=0) con el clasificador en la ultima generacion       
        params[2] = 1; 
        j = 0; 
-       nf = Verificar(&subpobnueva.individuos[j]);
+       Verificar(&subpobnueva.individuos[j]);
 
        MPI_Send(params, 3, MPI_INTEGER, 0, tag, everyone);        
        for (k=0;k<pobnueva.lcrom;k++) buffer[k] = 0;
@@ -1453,7 +1451,6 @@ double AG::sharing_fun(double dist, double sigma, double alfa)
 void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruza, double in_pmutacion, int nproc, float tasa_activ, string cfg_settings)
 {
      int i, j, k;
-     float seed;
 
      //Inicializa datos.
      pobvieja.tampob = in_tampob;
@@ -1525,11 +1522,10 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
      bool busys[nproc];
      double aptitud[nproc][nObjctvs];
      int map[nproc];
-     double acum=0, *pointApt;
+     double *pointApt;
      int tag;
      char *arg[3];
      int params[3];
-     unsigned nf;
 
      /*--------------------------------------------*/
 
@@ -1576,7 +1572,7 @@ void AG::inicializar(int in_tampob, int in_lcrom, int in_maxgen, double in_pcruz
              {
                 pobvieja.individuos[j].crom = initcrom(pobvieja.lcrom, activ_rate);                                     // new init
              }
-             nf = Verificar(&pobvieja.individuos[j]);
+             Verificar(&pobvieja.individuos[j]);
                            
              pobvieja.individuos[j].padre1 = 0;
              pobvieja.individuos[j].padre2 = 0;
@@ -1811,7 +1807,8 @@ cromosoma AG::mutacion(cromosoma crom, double pmutacion, int caso, int &NMutas)
 
   } // fin switch
   
-  unsigned nf = Verificar(&aux_crom);
+  // unsigned nf = 
+  Verificar(&aux_crom);
   
   return aux_crom;
 } // fin mutacion
@@ -1933,7 +1930,7 @@ void AG::ImprimirCromoForTest(individuo johndoe, bool append)
     if (!append) best_crom.open(crom_file.c_str(), ofstream::out | ofstream::trunc);
     else best_crom.open(crom_file.c_str(), ofstream::out | ofstream::app); 
     
-    for (int i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) best_crom << i+1 << " ";
+    for (size_t i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) best_crom << i+1 << " ";
     best_crom << endl;     
     
     best_crom.close();     
@@ -1943,10 +1940,10 @@ void AG::ImprimirCromoForTest(individuo johndoe, bool append)
 
 void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onlyBest, bool yaml)
 {
-    unsigned best_j = 0;
+    // unsigned best_j = 0;
     short cnt = 0;
 
-    int aux_rank=inPOB.tampob;
+    unsigned aux_rank=inPOB.tampob;
     for (unsigned j=0;j<inPOB.individuos.size();j++) 
     {
         if (aux_rank > inPOB.individuos[j].rango){
@@ -1979,7 +1976,7 @@ void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onl
     }    
     
     if (onlyBest) {
-         int nc = 0, Best = 0;
+         int Best = 0;
          double dist = 0.0, aux=0.0;
          
          for (unsigned j=0;j<inPOB.individuos.size();j++)
@@ -2026,7 +2023,7 @@ void AG::ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront)
      results << "::> Generacion: " << generac << endl;
      results << "::> Individuo: " << indiv << endl;
      results << "::> Coeficientes Seleccionados: " <<  endl;
-     for (int i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) results << i+1 << " ";        
+     for (size_t i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) results << i+1 << " ";        
      results << endl;
      results << "::> Numero Coeficientes Seleccionados: " << johndoe.nF << endl;
      results << "::> Fitness: " << johndoe.Fitness << endl;
@@ -2113,7 +2110,7 @@ void AG::ImprimirGen(int generac, double maxfitness, double minfitness, double p
       if (!results.is_open()) results.open(res_file.c_str(), ofstream::out | ofstream::app);
       
       double caux=0.0;
-      for (short i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
+      for (size_t i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
       caux=caux/clusters.size();         
           
       results << " " << endl;
@@ -2142,16 +2139,17 @@ void AG::ImprimirGen(int generac, double maxfitness, double minfitness, double p
 
 void AG::yaml_ImprimirGen(int gener, double maxfitness, double minfitness, double prom, poblacion &inPOB)
 {
+      /*
       time_t rawtime;
       struct tm * timeinfo;
-
       time ( &rawtime );
       timeinfo = localtime ( &rawtime );
-
+      */
+      
       if (!results.is_open()) results.open(yaml_file.c_str(), ofstream::out | ofstream::app);
       
       double caux=0.0;
-      for (short i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
+      for (size_t i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
       caux=caux/clusters.size();         
           
       
@@ -2269,7 +2267,6 @@ void AG::Terminar(int nproc, int lcrom, bool txt)
 {
       int buffer[lcrom];
       int params[3];
-      float seed = 5;
       int tag = 1000+nproc;
       
       buffer[0]=-5; // señal para matar todos los procesos creados
@@ -2419,7 +2416,7 @@ int main(int argc, char** argv)
     AlgGen.Elite = SETTINGS.get_int("E"); 
     
     short  steady = SETTINGS.get_int("steady");
-    double fitmax = SETTINGS.get_dbl("fitmax");
+    // double fitmax = SETTINGS.get_dbl("fitmax");
 
     // Mutacion con decaimiento ->
     bool muta_expo   = false;
@@ -2437,9 +2434,8 @@ int main(int argc, char** argv)
          gamma_ini = SETTINGS.get_dbl("GammaINI");
          gamma_fin = SETTINGS.get_dbl("GammaFIN");
     }      
-    
-    double sigma_share=0, alfa_share=0;    // PARAMETROS PARA FUNCION DE FITNESS SHARING
-    
+        
+    // PARAMETROS PARA FUNCION DE FITNESS SHARING    
     AlgGen.sigma_share = SETTINGS.get_dbl("SigmaShare");
     AlgGen.alfa_share  = SETTINGS.get_dbl("AlfaShare");
     AlgGen.dist_opt = SETTINGS.get_int("dist_opt");
