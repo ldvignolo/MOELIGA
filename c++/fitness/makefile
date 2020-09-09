@@ -17,9 +17,18 @@
 # -std=c++11 -I../src/  -L/usr/lib64 -I/usr/include/armadillo_bits/
 # 
 
+LMPVERSION='locate libmlpack.so.3.3'
+
+ifndef LMPVERSION
+OPCIONES=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/
+endif
+ifdef LMPVERSION
+OPCIONES=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/ -D CORRECT_MLPACK_VERSION
+endif
+
+
 CXX=g++
 CXY=mpicxx
-OPCIONES=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/
 OPCIONES2= -std=c++11 -O3  -DMPICH_IGNORE_CXX_SEEK -lpthread -ftree-parallelize-loops=8
 
 
