@@ -19,22 +19,27 @@
 
 
 
-OPCIONES=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/ -llapack -lblas 
-OPCIONES3=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -I/usr/lib -lboost_serialization -fopenmp -DARMA_DONT_USE_WRAPPER -llapack -lblas -lmlpack -Wl,-rpath=/usr/local/lib 
+# OPCIONESF=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/ -llapack -lblas -larpack 
+# OPCIONESU=-g -Wall -O3 -I/usr/include -L/usr/local/lib64/ -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/lib/x86_64-linux-gnu/ -llapack -lblas -larpack 
+
+OPCIONESF=-g -Wall -O3 -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/local/lib64/ -llapack -lblas -larpack 
+OPCIONESU=-g -Wall -O3 -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/lib/x86_64-linux-gnu/ -llapack -lblas -larpack 
 
 CXX=g++
 CXY=mpicxx
-OPCIONES2= -std=c++11 -O3  -DMPICH_IGNORE_CXX_SEEK -lpthread -ftree-parallelize-loops=8
+OPCIONESM= -std=c++11 -DMPICH_IGNORE_CXX_SEEK -lpthread -ftree-parallelize-loops=8 -lmpich 
 
 
 all:
-	${CXX} ${OPCIONES} test.cpp -o test -lc 
-	${CXY} ${OPCIONES} ${OPCIONES2} fitness.cpp -o fitness -lmpich -lc
+	${CXX} test.cpp -o test ${OPCIONESF} -lc 
+	${CXY} fitness.cpp -o fitness ${OPCIONESM} ${OPCIONESF} 
 test:
-	${CXX} ${OPCIONES} test.cpp -o test -lc
+	${CXX} test.cpp -o test ${OPCIONESF} -lc
 fit:
-	${CXY} ${OPCIONES} ${OPCIONES2} fitness.cpp -o fitness -lmpich -lc
+	${CXY} fitness.cpp -o fitness ${OPCIONESF} ${OPCIONESM} 
 ubuntu:
-	${CXX} ${OPCIONES3} test.cpp -o test -lc
-	${CXY} ${OPCIONES3} ${OPCIONES2} fitness.cpp -o fitness -lmpich -lc
+	${CXX} test.cpp -o test ${OPCIONESU} -lc
+	${CXY} fitness.cpp -o fitness ${OPCIONESM} ${OPCIONESU}
 
+
+# mpicxx fitness.cpp -o fitness -DMPICH_IGNORE_CXX_SEEK -lpthread -ftree-parallelize-loops=8 -lmpich -g -Wall -O3 -fopenmp -larmadillo -lboost_serialization -lmlpack -Wl,-rpath=/usr/lib/x86_64-linux-gnu/ -llapack -lblas -larpack -lc

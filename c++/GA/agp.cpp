@@ -2311,7 +2311,7 @@ int main(int argc, char** argv)
 {
     // string cmd = "mpdallexit; mpdboot; export PATH=$PATH:$PWD";
     string cmd = "mpdboot; export PATH=$PATH:$PWD";
-    system(cmd.c_str());
+    int bar = system(cmd.c_str());
     
     string aux, cfg_settings = "SETTINGS.cfg";
     
@@ -2496,7 +2496,7 @@ int main(int argc, char** argv)
        
     // DEFINO EL NOMBRE DEL ARCHIVO DE RESULTADOS
     string filename;
-    
+
     filename = SETTINGS.get_str("Filename");    
     AlgGen.folder = SETTINGS.get_str("outdir");
     
@@ -2504,7 +2504,8 @@ int main(int argc, char** argv)
         AlgGen.folder=".";
     }  else {
         cmd = "mkdir -p "+AlgGen.folder;
-        system(cmd.c_str());
+        bar = system(cmd.c_str());
+        
     }       
     if (Nsubpobs>0)
          AlgGen.folder = AlgGen.folder+"/MOELIGA+Subpobs_"+fecha;          
@@ -2512,10 +2513,11 @@ int main(int argc, char** argv)
          AlgGen.folder = AlgGen.folder+"/MOELIGA_"+fecha;
      
     cmd = "mkdir -p "+AlgGen.folder;
-    system(cmd.c_str());
+    bar = system(cmd.c_str());
+    
     
     cmd = "cp "+cfg_settings+" "+AlgGen.folder+"/";
-    system(cmd.c_str());
+    bar = system(cmd.c_str());
     
     // AlgGen.string_aux_filename = "_(gammas:_"+tostr(gamma_ini)+"_"+tostr(gamma_fin)+")";
     AlgGen.string_aux_filename = "";
@@ -2627,7 +2629,7 @@ int main(int argc, char** argv)
     if (!yaml) {
        cmd = "python3 Plot4MOELIGA.py ";
        cmd.insert(cmd.length(), filename); 
-       system(cmd.c_str());
+       bar = system(cmd.c_str());
     } 
     
     // ejecuto el test con los cromosomas del Frente 
@@ -2639,7 +2641,7 @@ int main(int argc, char** argv)
     cmd.insert(cmd.length(), " > ");     
     filename.replace(filename.find(".json"),5,".test");
     cmd.insert(cmd.length(), filename); 
-    system(cmd.c_str());
+    bar = system(cmd.c_str());
 
     /*
     cmd = "rm -fr ";
@@ -2649,9 +2651,11 @@ int main(int argc, char** argv)
     
     cmd = "cat ";
     cmd.insert(cmd.length(), filename); 
-    system(cmd.c_str());
+    bar = system(cmd.c_str());
     
     AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom,!yaml);
+    
+    (void) bar;
 
     return 0;
 
