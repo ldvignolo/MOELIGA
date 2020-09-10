@@ -87,7 +87,7 @@ struct t_elm_par{
 t_elm_par elm_params;
 
 vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short pobtype, double alpha, double beta, int NObjectives);
-vector <string> SplitWords(string strString);
+// vector <string> SplitWords(string strString);
 struct svm_model* train(unsigned Nfeat, struct svm_problem datos);
 double test(string configs, struct svm_problem datos, struct svm_model *modelo, vector <int> labels);
 void process_mem_usage(double& vm_usage, double& resident_set);
@@ -165,6 +165,7 @@ int main(int argc, char** argv)
     elm_params.nhn_max = SETTINGS.get_bool("elm_nhn_max");
     
     clasificador = SETTINGS.get_str("test_classifier");
+    std::transform(clasificador.begin(), clasificador.end(), clasificador.begin(), ::tolower); 
     
     configs_trn.insert(configs_trn.begin(),' ');
     configs_trn.insert(configs_trn.end(),' ');
@@ -202,9 +203,7 @@ int main(int argc, char** argv)
     NObjectives = ini_NObjectives;
     lcrom = Nfeat;
     pobtype = 0;
-    
-    double elapsed = 0;
-    
+   
     auto doTest = [&] () {
 
         cromovect.resize(0);
@@ -504,7 +503,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      
      cout << "  \"CLASIFICADORES\": {" << endl;
      
-     if (caseInSensStringCompare(clasificador, str_svm)) 
+     if (caseInSensStringCompare(clasificador, "svm")) 
      {
         cout << "                     \"SVM\": {" << endl;
         modelo = train(CFeats, trnD_aux);
@@ -514,7 +513,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
         svm_free_and_destroy_model(&modelo); 
         cout << "                            }" << endl;
      
-     } else if (caseInSensStringCompare(clasificador, str_elm)) 
+     } else if (caseInSensStringCompare(clasificador, "elm")) 
      {
         cout << "                     \"ELM\": {" << endl; 
         aptitude[1] = elm(trnD_aux, tstD_aux, CFeats, elm_params.nhn, elm_params.rf, elm_params.multi, elm_params.nhn_max);
@@ -522,7 +521,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
         cout << "                             \"ELAPSED_TIME\": " << elapsed << endl;        
         cout << "                            }" << endl;
         
-     } else if (caseInSensStringCompare(clasificador, str_ALL))
+     } else if (caseInSensStringCompare(clasificador, "all"))
      {
          
         double elapsed2, elapsed1 = toc2(); 
@@ -540,7 +539,16 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
         cout << "                             \"ELAPSED_TIME\": " << elapsed1+elapsed2 << endl; 
         cout << "                            }" << endl;
         svm_free_and_destroy_model(&modelo);          
-     }
+     } else 
+     {    
+        cout << "                     \"SVM\": {" << endl;
+        modelo = train(CFeats, trnD_aux);
+        aptitude[1] = test(configs_tst, tstD_aux, modelo, tst_labels);
+        double elapsed = toc2();        
+        cout << "                             \"ELAPSED_TIME\": " << elapsed << endl;
+        svm_free_and_destroy_model(&modelo); 
+        cout << "                            }" << endl;
+     }    
      cout << "                    }" << endl;            
 
      /************************************************************************************/
@@ -564,7 +572,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
 
 
 
-
+/*
 vector <string> SplitWords(string strString)
 {
   int ws=-1,we=-5;
@@ -598,7 +606,7 @@ vector <string> SplitWords(string strString)
 
   return words;
 }
-
+*/
 
 
 

@@ -16,7 +16,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Tool to perform multiple experiments with different parameters.')
 parser.add_argument('-s', '--experiment_settings', default='runner_settings.yaml', help='Settings file to configure this tool.')
 parser.add_argument('-e', '--eliga_settings', default=None, help='Settings file for ELIGA.')
-parser.add_argument('-p', '--current_path', default='out/', help='Path to output results. By default it is "out/".')
+parser.add_argument('-p', '--experiment_path', default='out/', help='Path to output results. By default it is "out/".')
 parser.add_argument('-r', '--repetitions', default=10, help='Number of times that the same parameters must be evaluated.')
 
 args = vars(parser.parse_args())
