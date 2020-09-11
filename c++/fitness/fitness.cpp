@@ -40,7 +40,7 @@
 // #include <mlpack/core/cv/metrics/accuracy.hpp>
 
 #include "loadarff.hpp"
-
+#include "optim.hpp"
 
 using namespace mlpack;
 using namespace mlpack::tree;
@@ -92,11 +92,12 @@ using namespace mlpack::kmeans;
 using namespace std;
 
 
-const char* trnfile="";
+// const char* trnfile="";
 
 string salida = "";
 vector <string> clasificadores;
 vector <string> clasif_configs;
+string optimizador, optim_configs;
 size_t  numClasses;
 
 arma::mat TRNdata;
@@ -226,20 +227,27 @@ int main(int argc, char** argv)
     
     Dictionary SETTINGS(argv[2]);
 
-    string aux1 = "";
-    aux1 = SETTINGS.get_str("trnfile");
-    trnfile=aux1.c_str();
-
+    
+    string trnfile = SETTINGS.get_str("trnfile");
+    
+    optimizador = SETTINGS.get_str("Optimizer");  
     string clasificador = SETTINGS.get_str("classifier");    
     clasificadores = SplitWords(clasificador);
+    string aux;
     
     for (size_t i=0;i<clasificadores.size();i++)
     {
-        string aux = "classifier_";
+        aux = "classifier_";
         aux+=clasificadores[i];
         aux+="_config";        
         clasif_configs.push_back(SETTINGS.get_str(aux.c_str()));
     }    
+    
+    aux = "optimizer_";
+    aux+=optimizador;
+    aux+="_config";        
+    optim_configs = SETTINGS.get_str(aux.c_str());
+    std::transform(optimizador.begin(), optimizador.end(), optimizador.begin(), ::tolower);
     
     /*--------------------------------*/
     
@@ -551,14 +559,9 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                                                               par5,         //  tolerance:        pSGD: Maximum absolute tolerance to terminate the algorithm. (1e-5)
                                                               par6,         //  shuffle:          pSGD: If true, the function order is shuffled; otherwise, each function is visited in linear order. (true)
                                                               par7 ));      //  decayPolicy:      pSGD: The step size update policy to use. (5)                                          
-
-                     
                      
                      // cv::SimpleCV<mlpack::svm::LinearSVM<>, UAR> cv3(validationSize, TRNdataTMP, trnLabelsTMP, numClasses);  
                      // cUAR = cv3.Evaluate(0.0001 /*lambda*/, 1.0 /*delta*/, false /*shuffle*/); 
-                     
-                     
-                     
                      
                  }  
                  else if (clasificador == "rf") 
@@ -610,17 +613,21 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      
                  }               
                  else if (clasificador == "mlp")    
-                 {                     
-                     int par1, par2, par3, par4;
-                     double par5, par6;
-                     bool par7;
+                 {     
+                     int par1, par2;
                      geek >> par1;                   // layer 1 units, if 0 -> (attribs + classes) / 2, if (-1) -> (attribs + classes
                      geek >> par2;                   // layer 2 units, if 0 -> (attribs + classes) / 2, if (-1) -> (attribs + classes
+                
+                     /*
+                     int par3, par4;
+                     double par5, par6;
+                     bool par7;
                      geek >> par3;                   // SGD epochs        :  30
                      geek >> par4;                   // SGD batch size    :  10
                      geek >> par5;                   // SGD training speed:  0.03
                      geek >> par6;                   // SGD tolerance     :  1e-5
                      geek >> par7;                   // SGD shuffle       :  true (1/0)
+                     */
                      
                      if (par1==0)  par1 = (TRNdataTMP.n_rows + numClasses)/2;
                      if (par1==-1) par1 = (TRNdataTMP.n_rows + numClasses); 
@@ -635,24 +642,27 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      model.Add<SigmoidLayer<> >();
                      model.Add<Linear<> >(par2, numClasses);
                      model.Add<LogSoftMax<> >();             
-                     // Train the model.
+                     
+                     /*
                      size_t numEpoches = par3;
                      size_t batchSize  = par4;                     
                      size_t numRBMIterations = NData * numEpoches;
                      numRBMIterations /= batchSize;
                      ens::StandardSGD opt(par5, batchSize, numRBMIterations, par6, par7);             
-                     arma::mat trnLabelsMat, pred_one_hot;
-                     arma::Row<size_t> output;
+                     */
                      
+                     // Cross Validation
                      arma::uvec trnIdx = arma::regspace<arma::uvec>(0, 1, floor(1.0-validationSize)*(NData-1));  
                      arma::uvec tstIdx = arma::regspace<arma::uvec>(0, 1, ceil(validationSize*(NData-1)));  
-                     
+
+                     // Train the model.                      
+                     arma::Row<size_t> output;                     
+                     arma::mat trnLabelsMat, pred_one_hot;
                      trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabelsTMP+1);      
-                     model.ResetParameters();
-                     
-                     model.Train(TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), opt);             
-                     model.Predict(TRNdataTMP.cols(tstIdx), pred_one_hot);    
-                     
+                     model.ResetParameters();                     
+                     // model.Train(TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), opt);     
+                     EntrenarModelo<FFN<>> (model, TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), optimizador, optim_configs);                      
+                     model.Predict(TRNdataTMP.cols(tstIdx), pred_one_hot);                         
                      output.zeros(pred_one_hot.n_cols);
                      // Find index of max prediction for each data point and store in "prediction"
                      for (size_t p = 0; p < pred_one_hot.n_cols; ++p)
@@ -660,13 +670,18 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                         output(p) = arma::as_scalar(arma::find(arma::max(pred_one_hot.col(p)) == pred_one_hot.col(p), 1));                 
                      }                              
                      pred_one_hot.clear();
-
                      cUAR = fUAR(trnLabelsTMP.cols(tstIdx),output);
                      
                  }                       
                  else if (clasificador == "rbf")
                  {                     
+                     
+                     int par1;
+                     double par2;
+                     geek >> par1;                   // number of layer 1 units / centroids
+                     geek >> par2;                   // betas: The beta value to be used with centres (double, 0).
   
+                     /*
                      int par1, par3, par4;
                      double par2, par5, par6;
                      bool par7;
@@ -677,6 +692,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      geek >> par5;                   // SGD training speed:  0.03
                      geek >> par6;                   // SGD tolerance     :  1e-5
                      geek >> par7;                   // SGD shuffle       :  true (1/0)
+                     */
                      
                      arma::mat centroids;
                      KMeans<> kmeans;
@@ -688,30 +704,33 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                                                                                     // outSize: The number of output units (size_t).                                                                            
                      model.Add<Linear<> >(par1, numClasses);
                      model.Add<LogSoftMax<> >();             
-                     // Train the model.
+                     
+                     /*
                      size_t numEpoches = par3;
                      size_t batchSize  = par4;
                      size_t numRBMIterations = TRNdataTMP.n_cols * numEpoches;
                      numRBMIterations /= batchSize;
                      ens::StandardSGD opt(par5, batchSize, numRBMIterations, par6, par7);             
-                     arma::mat trnLabelsMat, pred_one_hot;
-                     arma::Row<size_t> output;
+                     */
                      
+                     // Cross Validation
                      arma::uvec trnIdx = arma::regspace<arma::uvec>(0, 1, floor(1.0-validationSize)*(NData-1));  
-                     arma::uvec tstIdx = arma::regspace<arma::uvec>(0, 1, ceil(validationSize*(NData-1)));                       
+                     arma::uvec tstIdx = arma::regspace<arma::uvec>(0, 1, ceil(validationSize*(NData-1)));                                            
                      
-                     trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabelsTMP+1);                      
-                     model.Train(TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), opt);             
-                     model.Predict(TRNdataTMP.cols(tstIdx), pred_one_hot);                       
-                     
+                     // Train the model.
+                     arma::Row<size_t> output;                                                               
+                     arma::mat trnLabelsMat, pred_one_hot;                     
+                     trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabelsTMP+1);
+                     // model.Train(TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), opt);  
+                     EntrenarModelo<FFN<>> (model, TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), optimizador, optim_configs);                      
+                     model.Predict(TRNdataTMP.cols(tstIdx), pred_one_hot);                                            
                      output.zeros(pred_one_hot.n_cols);
                      // Find index of max prediction for each data point and store in "prediction"
                      for (size_t p = 0; p < pred_one_hot.n_cols; ++p)
                      {
                         output(p) = arma::as_scalar(arma::find(arma::max(pred_one_hot.col(p)) == pred_one_hot.col(p), 1));                 
                      }                              
-                     pred_one_hot.clear();
-                     
+                     pred_one_hot.clear();                     
                      cUAR = fUAR(trnLabelsTMP.cols(tstIdx),output);                     
                      
                  }                      
