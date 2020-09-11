@@ -91,10 +91,6 @@ using namespace mlpack::kmeans;
 
 using namespace std;
 
-
-// const char* trnfile="";
-
-string salida = "";
 vector <string> clasificadores;
 vector <string> clasif_configs;
 string optimizador, optim_configs;
@@ -226,10 +222,8 @@ int main(int argc, char** argv)
     //----------------------------------
     
     Dictionary SETTINGS(argv[2]);
-
     
     string trnfile = SETTINGS.get_str("trnfile");
-    
     optimizador = SETTINGS.get_str("Optimizer");  
     string clasificador = SETTINGS.get_str("classifier");    
     clasificadores = SplitWords(clasificador);

@@ -90,9 +90,6 @@ using namespace mlpack::kmeans;
 using namespace std;
 
 
-// const char* trnfile="";
-// const char* tstfile="";
-
 vector <string> clasificadores;
 vector <string> clasif_configs;
 string optimizador, optim_configs;
