@@ -542,7 +542,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
              method.Classify(TSTdataTMP, output);  
              
          }
-         else if (clasificador == "rf") 
+         else if ((clasificador == "rf") || (clasificador == "randomforest"))
          {
              cout << offset << "\"RandomForest\":" << endl;  
              int par1, par2, par4;             
@@ -560,7 +560,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
                                                   par4);             // maximumDepth = 0,
              method.Classify(TSTdataTMP, output);                                                 
          }
-         else if (clasificador == "ada") 
+         else if ((clasificador == "ada") || (clasificador == "adaboost") || (clasificador == "ab"))
          {             
              cout << offset <<"\"AdaBoost\":" << endl;  
              int par1, par2;
@@ -581,7 +581,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
                                                   par3);                    // tolerance     
              method.Classify(TSTdataTMP, output);             
          }
-         else if (clasificador == "dt") 
+         else if ((clasificador == "dt") || (clasificador == "decisiontree"))
          {
              cout << offset << "\"DecisionTree\":" << endl;             
              int par1, par2, par3;

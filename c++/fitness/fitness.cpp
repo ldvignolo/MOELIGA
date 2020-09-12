@@ -573,7 +573,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      // cUAR = cv3.Evaluate(0.0001 /*lambda*/, 1.0 /*delta*/, false /*shuffle*/); 
                      
                  }  
-                 else if (clasificador == "rf") 
+                 else if ((clasificador == "rf") || (clasificador == "randomforest"))
                  {
                      int par1, par2, par4;             
                      double par3;
@@ -590,7 +590,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                                           par4 );            // maximumDepth = 0,
                      
                  }               
-                 else if (clasificador == "ada") 
+                 else if ((clasificador == "ada") || (clasificador == "adaboost")  || (clasificador == "ab")) 
                  {
                      int par1, par2;
                      double par3;
@@ -607,7 +607,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                                           par3);                              // tolerance     
                      
                  }               
-                 else if (clasificador == "dt") 
+                 else if ((clasificador == "dt") || (clasificador == "decisiontree"))
                  {
                      int par1, par2, par3;
                      geek >> par1; 
