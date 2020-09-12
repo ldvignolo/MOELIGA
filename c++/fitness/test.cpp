@@ -26,6 +26,7 @@
 #include <mlpack/core/data/split_data.hpp>
 #include <mlpack/methods/random_forest/random_forest.hpp>
 #include <mlpack/methods/linear_svm/linear_svm.hpp>
+#include <mlpack/methods/naive_bayes/naive_bayes_classifier.hpp>
 #include <mlpack/methods/decision_tree/decision_tree.hpp>
 #include <mlpack/methods/adaboost/adaboost.hpp>
 #include <mlpack/methods/perceptron/perceptron.hpp>
@@ -493,7 +494,24 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
          stringstream geek(clasif_configs[i]);          
          string offset = string(25, ' ');
          
-         if (clasificador == "svm") 
+         if ((clasificador == "naivebayes") || (clasificador == "nb"))
+         {
+             cout << offset << "\"NaiveBayes\":" << endl;   
+             bool par1;
+             double par2;
+             geek >> par1; 
+             geek >> par2; 
+         
+             mlpack::naive_bayes::NaiveBayesClassifier<> method (TRNdataTMP,                      //  Independent variables  
+                                                                 trnLabels,                       //  Dependent variables                                             
+                                                                 numClasses,                      //  number of classes  
+                                                                 par1,                            //  incrementalVariance = false,
+                                                                 par2 );                          //  epsilon = 1e-10 
+
+             method.Classify(TSTdataTMP, output);  
+         
+         }
+         else if (clasificador == "svm") 
          {
              cout << offset << "\"SVM\":" << endl;   
              double par1, par2, par5, par7;

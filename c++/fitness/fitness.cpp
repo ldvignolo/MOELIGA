@@ -26,6 +26,7 @@
 #include <mlpack/methods/random_forest/random_forest.hpp>
 #include <mlpack/methods/linear_svm/linear_svm.hpp>
 #include <mlpack/methods/decision_tree/decision_tree.hpp>
+#include <mlpack/methods/naive_bayes/naive_bayes_classifier.hpp>
 #include <mlpack/methods/adaboost/adaboost.hpp>
 #include <mlpack/methods/perceptron/perceptron.hpp>
 #include <mlpack/core/data/scaler_methods/standard_scaler.hpp>
@@ -530,7 +531,21 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                  std::transform(clasificador.begin(), clasificador.end(), clasificador.begin(), ::tolower);         
                  stringstream geek(clasif_configs[i]);          
 
-                 if (clasificador == "svm") 
+                
+                 if ((clasificador == "naivebayes") || (clasificador == "nb"))
+                 {
+                     bool par1;
+                     double par2;
+                     geek >> par1; 
+                     geek >> par2; 
+                    
+                     cv::SimpleCV<mlpack::naive_bayes::NaiveBayesClassifier<>, UAR> val(validationSize, TRNdataTMP, trnLabelsTMP, numClasses); 
+                     
+                     cUAR = val.Evaluate( par1,                            //  incrementalVariance = false,
+                                          par2 );                          //  epsilon = 1e-10 
+                      
+                 }    
+                 else if (clasificador == "svm") 
                  {
                      double par1, par2, par5, par7;
                      int par3, par4; 
