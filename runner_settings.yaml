@@ -1,7 +1,13 @@
 ---
  PARAMETERS:
-  Obj2Sigmod: [True, False]
-  SigmLambda: [5.0,0.9]
+  TasaActivacionEscalonada: [True, False]  
+  NSubPoblaciones: [0,3]
+  SubPob_Replace_Type: ['reemplazo_completo', 'reemplazo_seleccion']
+  NObjetivos: [2,3]
+  Obj2Sigmod: [True]
+  SigmLambda: [5.0,0.9,1.5,5.0]
+  
 
  DEPENDENCIAS:
   Obj2Sigmod: ['SigmLambda']
+  

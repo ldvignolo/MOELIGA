@@ -83,6 +83,7 @@ double toc(bool verbose) {
                 << endl;
     }          
     tictoc_stack.pop();
+    return elapsed;
 }
 
 
