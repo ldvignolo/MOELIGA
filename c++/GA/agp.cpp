@@ -2576,6 +2576,9 @@ int main(int argc, char** argv)
 
         ngs++;
         
+        if (!AlgGen.verbose)
+        cout << "\r" << "Generacion: " << (AlgGen.gen+1);
+        
         // *******************************************************//
         // generación(tamaño_brecha, tipo_selección, tipo_mutación);
         // tipo_selección: 1 = ruleta, 2 = competencia, 3 = ventanas
@@ -2635,6 +2638,7 @@ int main(int argc, char** argv)
 
          
     } while ((AlgGen.gen < AlgGen.maxgen) & (count<( (short) AlgGen.maxgen* (((float) steady) / 100)) ));
+    if (!AlgGen.verbose) cout << endl;
     
     // hago el plot de la corrida
     if (!yaml) {
