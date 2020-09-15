@@ -1032,7 +1032,7 @@ class SINGLE_EXPERIMENT(object):
         #------------------------
         # PLOT CONFUSION MATRIX
         #------------------------
-        self.plot_confusion_matrix(criteria=['R1','R2'], show=False, save=True)
+        # self.plot_confusion_matrix(criteria=['R1','R2'], show=False, save=True)
         
         
         # ANIMACION DEL FRENTE DE PARETO
