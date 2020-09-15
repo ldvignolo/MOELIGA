@@ -592,7 +592,7 @@ class SINGLE_EXPERIMENT(object):
         NR = len(self.test[0]['CLASIFICADORES'])
         NC = len(criteria)
         
-        fig, ax = plt.subplots(NC, NR, figsize=(5*NC,2*NR))
+        fig, ax = plt.subplots(NR, NC, figsize=(5*NC,2*NR))
         
         for idx_c,criterium in enumerate(criteria):
             

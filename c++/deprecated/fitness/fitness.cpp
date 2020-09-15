@@ -68,8 +68,7 @@ const char* tstfile="";
 string configs_trn = "";
 string configs_tst = "";
 string clasificador = "svm";
-string str_svm = "SVM";
-string str_elm = "ELM";
+
 
 struct t_elm_par{
     int nhn;
@@ -80,7 +79,7 @@ struct t_elm_par{
 t_elm_par elm_params;
 
 vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short pobtype, int NObjectives, float ptrain, unsigned ntest, bool c_eval);
-vector <string> SplitWords(string strString);
+// vector <string> SplitWords(string strString);
 struct svm_model* train(unsigned Nfeat, struct svm_problem datos);
 double test(string configs, struct svm_problem datos, struct svm_model *modelo, vector <int> labels);
 void process_mem_usage(double& vm_usage, double& resident_set);
@@ -153,6 +152,7 @@ int main(int argc, char** argv)
     elm_params.nhn_max = SETTINGS.get_bool("elm_nhn_max");    
     
     clasificador = SETTINGS.get_str("classifier");
+    std::transform(clasificador.begin(), clasificador.end(), clasificador.begin(), ::tolower); 
     
     bool Obj2Sigmod = SETTINGS.get_bool("Obj2Sigmod"); // false por omision     
     float SigmLambda = SETTINGS.get_dbl("SigmLambda"); 
@@ -312,7 +312,7 @@ int main(int argc, char** argv)
 double distL1(svm_node *x, svm_node *y, vector <int> indF)
 {
     double dist = 0.0;
-    for (int i=0;i<indF.size();i++)
+    for (size_t i=0;i<indF.size();i++)
         dist = dist + fabs(x[indF[i]].value-y[indF[i]].value);
     dist = dist / indF.size();
     
@@ -333,16 +333,16 @@ double distL1(svm_node *x, svm_node *y, int Nf)
 double Rmeasure(struct svm_problem data, cromosoma crom)
 {
     vector <int> indF;
-    for (int i=0;i<crom.size();i++) 
+    for (size_t i=0;i<crom.size();i++) 
         if (crom[i]) indF.push_back(i);
 
-    int Nd = data.l;    
+    unsigned Nd = data.l;    
     // int Nr = ceil(0.2*Nd);
-    int Nr = ceil(0.35*Nd);
+    unsigned Nr = ceil(0.35*Nd);
     
     vector <int> indI;
     
-    for (int i=0;i<Nd;i++) indI.push_back(i);
+    for (unsigned i=0;i<Nd;i++) indI.push_back(i);
     random_shuffle ( indI.begin(), indI.end() );
     
     double nmiss, nhit, dist, measure = 0.0;
@@ -352,7 +352,7 @@ double Rmeasure(struct svm_problem data, cromosoma crom)
         nmiss = __DBL_MAX__;
         nhit = __DBL_MAX__;        
         for (unsigned j=0;j<Nd;j++){
-            if (j!=indI[k]) 
+            if (j!= (unsigned) indI[k]) 
             {                
                 dist = distL1(data.x[j], data.x[indI[k]], indF);
                 if (data.y[j] == data.y[indI[k]]) {
@@ -372,13 +372,13 @@ double Rmeasure(struct svm_problem data, cromosoma crom)
 double Rmeasure(struct svm_problem data, int Nf)
 {
 
-    int Nd = data.l;    
-    int Nr = ceil(0.2*Nd);
+    unsigned Nd = data.l;    
+    unsigned Nr = ceil(0.2*Nd);
     
-    vector <int> indI;
+    vector <unsigned> indI;
     
     indI.resize(Nd);
-    for (int i=0;i<Nd;i++) indI[i]=i;
+    for (unsigned i=0;i<Nd;i++) indI[i]=i;
     random_shuffle ( indI.begin(), indI.end() );
     
     double nmiss, nhit, dist, measure = 0.0;
@@ -387,7 +387,7 @@ double Rmeasure(struct svm_problem data, int Nf)
         nmiss = DBL_MAX;
         nhit = DBL_MAX;        
         for (unsigned j=0;j<Nd;j++){
-            if (j!=indI[k]) 
+            if (j!=(unsigned) indI[k]) 
             {                
                 dist = distL1(data.x[j], data.x[indI[k]], Nf);
                 if (data.y[j] == data.y[indI[k]]) {
@@ -519,27 +519,27 @@ void scale_data(unsigned Ncols, cromosoma crom)
      int NF = index.size();    
      
      vector <double> vmean, vstd;
-     for (unsigned k=0;k<NF;k++)
+     for (int k=0;k<NF;k++)
      {
          vmean.push_back(0.0);
          for (int i=0;i<trnD.l;i++) vmean[k]=vmean[k]+trnD.x[i][index[k]].value;
      }
      
-     for (unsigned k=0;k<NF;k++)
+     for (int k=0;k<NF;k++)
      {
          vmean[k]=vmean[k]/trnD.l;
          vstd.push_back(0.0);
          for (int i=0;i<trnD.l;i++) vstd[k]=vstd[k]+pow(trnD.x[i][index[k]].value - vmean[k],2.0);
      }
-     for (unsigned k=0;k<NF;k++)         
+     for (int k=0;k<NF;k++)         
              vstd[k]= sqrt(vstd[k]/trnD.l);
 
      for (int i=0;i<trnD.l;i++)
-         for (unsigned k=0;k<NF;k++)
+         for (int k=0;k<NF;k++)
              trnD.x[i][index[k]].value = (trnD.x[i][index[k]].value - vmean[k]) / vstd[k];
    
      for (int i=0;i<tstD.l;i++)
-         for (unsigned k=0;k<NF;k++)
+         for (int k=0;k<NF;k++)
               tstD.x[i][index[k]].value = (tstD.x[i][index[k]].value - vmean[k]) / vstd[k];
 
 }
@@ -633,7 +633,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      
      int j;          
      
-     double fit_aux, mR;
+     double fit_aux = 0.0, mR;
      for (unsigned jk=0;jk<ntest;jk++){        
          
          int idx, Ncols = CFeats+1;
@@ -705,17 +705,21 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
          
          if (c_eval) 
          {            
-            if (caseInSensStringCompare(clasificador, str_svm)) {
-            
+            if (caseInSensStringCompare(clasificador, "svm"))
+            {
                 modelo = train(CFeats, trnD_aux);
                 fit_aux = test(configs_tst, tstD_aux, modelo, tst_labels);                
                 svm_free_and_destroy_model(&modelo);  
                 
-            } else if (caseInSensStringCompare(clasificador, str_elm)) {
-            
+            } else if (caseInSensStringCompare(clasificador, "elm")) 
+            {
                 fit_aux = elm(trnD_aux, tstD_aux, CFeats, elm_params.nhn, elm_params.rf, elm_params.multi, elm_params.nhn_max);
+            } else 
+            {    
+                modelo = train(CFeats, trnD_aux);
+                fit_aux = test(configs_tst, tstD_aux, modelo, tst_labels);                
+                svm_free_and_destroy_model(&modelo);  
             }
-            
          } else fit_aux = 0.0;
          
          aptitude[0] = aptitude[0] + fit_aux;
@@ -748,7 +752,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      
 }
 
-
+/*
 vector <string> SplitWords(string strString)
 {
   int ws=-1,we=-5;
@@ -782,7 +786,7 @@ vector <string> SplitWords(string strString)
 
   return words;
 }
-
+*/
 
 struct svm_model* train(unsigned Nfeat, struct svm_problem datos)
 {

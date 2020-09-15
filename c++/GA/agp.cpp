@@ -101,7 +101,7 @@ public:
        string crom_file;                       // nombre de archivo TXT de los mejores cromosomas (frente Pareto)
        string folder;                          // directorio para los archivos de resultados
        
-       
+       bool verbose=false;
        /*-----------------
              METODOS 
          -----------------*/
@@ -480,10 +480,13 @@ void AG::generacion(int brecha, int seltype, int mutatype, double in_pmutacion, 
             ibest=i;
         }
 
-    cout << "Generacion " << gen << " - Obj1: " << pobnueva.individuos[ibest].aptitud[0] << ", Obj2: " << pobnueva.individuos[ibest].aptitud[1] << ", Fsize: " << pobnueva.Current_Front_Size; 
-    cout << ", Clusters: " << clusters.size() << ", AvgClusSize: " << (int) caux << ", MeanDist: " << pobnueva.mean_dist << endl;
+    if (verbose) {
+        cout << "Generacion " << gen << " - Obj1: " << pobnueva.individuos[ibest].aptitud[0] << ", Obj2: " << pobnueva.individuos[ibest].aptitud[1] << ", Fsize: " << pobnueva.Current_Front_Size; 
+        cout << ", Clusters: " << clusters.size() << ", AvgClusSize: " << (int) caux << ", MeanDist: " << pobnueva.mean_dist << endl;
+    }
     
-    toc();
+    double elapsed = toc(verbose);
+    (void) elapsed;
     
     return;
 
@@ -867,7 +870,7 @@ void AG::CalcularFitness(poblacion &inPOB)
 //===================================================================
 void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int nproc, int Nsubpobs, int tamSubPob, int NGenSubPob, string cfg_settings)
 {
-
+    double elapsed;
     short c, i, k, j;
     float auxfit, imax;
     individuo elegido, auxiliar;
@@ -1004,7 +1007,9 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
         elegido = subpob[j].individuos[0];
         for (int g=0; g<NGenSubPob; g++){
 
-            cout << "Generacion " << gen << ", SubPob "<< j+1 << ", Generacion SubPob " << g+1 << endl;            
+            if (verbose) { 
+                cout << "Generacion " << gen << ", SubPob "<< j+1 << ", Generacion SubPob " << g+1 << endl;            
+            }
             tic();
             
             if (c>(NGenSubPob/10)) g = NGenSubPob;
@@ -1012,7 +1017,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
             subpob[j] = generSubPob(subpob[j], brecha, seltype, mutatype, pmuta, nproc, imax, g, NGenSubPob, T_reemplazo, sp_c_eval);
             elegido = subpob[j].individuos[0];
 
-            toc();
+            elapsed = toc(verbose);
 
             if (auxfit < elegido.Fitness)
             {
@@ -1047,15 +1052,19 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
                     pobnueva.individuos[elegidos[j]].edad = 0;
                 }
                 
-                cout << "Generacion " << gen << ", SubPob "<< j+1 << " Reemplazo! " << endl;
-                string notify="Reemplazo de individuo de SubPob a POBLACION";
-                Notificar(notify);
+                if (verbose) {
+                    cout << "Generacion " << gen << ", SubPob "<< j+1 << " Reemplazo! " << endl;
+                    string notify="Reemplazo de individuo de SubPob a POBLACION";
+                    Notificar(notify);
+                }
                 
                 for (k=0;k<nObjctvs;k++) pobnueva.individuos[elegidos[j]].aptitud[k]=elegido.aptitud[k];
                 // Imprimir(pobnueva.individuos[elegidos[j]], gen, elegidos[j]);
             
             } else {
-                cout << "Generacion " << gen << ", SubPob "<< j+1 << " Mantengo. " << endl;
+                if (verbose) {
+                    cout << "Generacion " << gen << ", SubPob "<< j+1 << " Mantengo. " << endl;
+                }
             } 
         }
 
@@ -1150,6 +1159,7 @@ void AG::EvoSubPobs(int brecha, int seltype, int mutatype, float pmuta, int npro
         
     }
         
+    (void) elapsed;
     //----------------------------------//
 
     return;
@@ -2240,7 +2250,7 @@ void AG::yaml_ImprimirGen(int gener, double maxfitness, double minfitness, doubl
       results << "   PROMEDIO_CLUSTER: "  << caux << endl;
       results << endl;
       
-      double total_elapsed = global_toc();      
+      double total_elapsed = global_toc(verbose);      
       results << "   TOTAL_ELAPSED_TIME: " << total_elapsed << endl;
       results << endl;
       
@@ -2283,7 +2293,7 @@ void AG::Terminar(int nproc, int lcrom, bool txt)
       }
       
       if (txt) {
-        double total_elapsed = global_toc();      
+        double total_elapsed = global_toc(verbose);      
         string filename = res_file;
         if (!results.is_open()) results.open(filename.c_str(), ofstream::out | ofstream::app);      
         results << " " << endl;
@@ -2491,6 +2501,7 @@ int main(int argc, char** argv)
         if (aux == "nsu") if (argc>=(i+1)) Nsubpobs = atoi(argv[i+1]);
         if (aux == "tsu") if (argc>=(i+1)) tamSubPob = atoi(argv[i+1]);
         if (aux == "gsu") if (argc>=(i+1)) NGenSubPob = atoi(argv[i+1]);
+        if (aux == "vrb") AlgGen.verbose = true;
 
     }    
        
@@ -2649,9 +2660,12 @@ int main(int argc, char** argv)
     system(cmd.c_str());
     */
     
-    cmd = "cat ";
-    cmd.insert(cmd.length(), filename); 
-    bar = system(cmd.c_str());
+    if (AlgGen.verbose) 
+    {
+        cmd = "cat ";
+        cmd.insert(cmd.length(), filename); 
+        bar = system(cmd.c_str());
+    }
     
     AlgGen.Terminar(nproc,AlgGen.pobvieja.lcrom,!yaml);
     

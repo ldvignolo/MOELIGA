@@ -16,7 +16,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Tool to perform multiple experiments with different parameters.')
 parser.add_argument('-s', '--experiment_settings', default='runner_settings.yaml', help='Settings file to configure this tool.')
 parser.add_argument('-e', '--eliga_settings', default=None, help='Settings file for ELIGA.')
-parser.add_argument('-p', '--current_path', default='out/', help='Path to output results. By default it is "out/".')
+parser.add_argument('-p', '--experiment_path', default='out/', help='Path to output results. By default it is "out/".')
 parser.add_argument('-r', '--repetitions', default=10, help='Number of times that the same parameters must be evaluated.')
 
 args = vars(parser.parse_args())
@@ -68,13 +68,20 @@ EXPERIMENTOS_REALIZADOS = []
 for experiment in experiments:
     
     #-------------------------------------------
-    if (args['current_path'][-1] != '/'):
-        folder = args['current_path'] + '/'
+    if (args['experiment_path'][-1] != '/'):
+        folder = args['experiment_path'] + '/'
     else:
-        folder = args['current_path'] + ''
+        folder = args['experiment_path'] + ''
     
     if not os.path.exists(folder):
         os.makedirs(folder)
+        
+        # GUARDO UNA COPIA DE C++
+        os.system('7z a -t7z -mx=9 {}/c++.7z c++/configs/ c++/fitness/ c++/GA/'.format(folder))
+        
+        # GUARDO UNA COPIA DE runner_settings.yaml
+        os.system('cp runner_settings.yaml {}'.format(folder))
+        
     
     PARAMETERS = dict()
     
