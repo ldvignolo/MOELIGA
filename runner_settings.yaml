@@ -10,4 +10,4 @@
 
  DEPENDENCIAS:
   Obj2Sigmod: ['SigmLambda']
-  
+  NSubPoblaciones: ['SubPob_Replace_Type']  
