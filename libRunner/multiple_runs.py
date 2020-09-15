@@ -58,6 +58,8 @@ def procesar_replicas(root_path, lib_path):
         
         mr.build_report()
         
+        mr.plot_report()
+        
         del mr
         
         print('Done!!\n')
@@ -986,6 +988,104 @@ class MULTIPLE_RUNS(object):
     
     
     
+    #====================================================
+    def plot_measure_evolution(self, measure, measure_name, ax=None, show=True, save=False):
+        '''
+        '''
+        
+        if (ax == None):
+            fig, ax = plt.subplots(1, 1, figsize=(8,2))
+        
+        #-----------------
+        # DATA
+        #-----------------
+        l1 = ax.plot(measure['G'], measure['mean'],'-r', linewidth=2)
+        l2 = ax.plot(measure['G'], measure['median'],':g', linewidth=2)
+        
+        ax.fill_between(measure['G'],
+                        measure['max'],
+                        measure['min'],
+                        facecolor='yellow', alpha=0.5)
+        
+        
+        ax.set_title(u'Evolution of {}'.format(measure_name), fontsize=7)
+        ax.set_xlabel(u'Generations', fontsize=7)
+        ax.set_ylabel(u'Measure', fontsize=7)
+        
+        ax.grid(True)
+        ax.tick_params(axis='x', which='major', labelsize=7)
+        ax.tick_params(axis='y', which='major', labelsize=7)
+        
+        ax.legend([r'mean', r'median'], loc='best')
+        
+        plt.tight_layout()
+        
+        
+        if save:
+            plt.savefig(os.path.join(self.path,'evolution_of_{}.pdf'.format(measure_name)), dpi=600)
+            plt.savefig(os.path.join(self.path,'evolution_of_{}.png'.format(measure_name)), dpi=600)
+        
+        if show:
+            plt.show()
+        
+        if (ax == None):
+            plt.close(fig)
+    #====================================================
+    
+    
+    #====================================================
+    def plot_summary(self, measures=[], show=True, save=False):
+        '''
+        '''
+        
+        N = len(measures)
+        
+        #--------------------------------------------------------------------
+        fig, ax = plt.subplots(N, 1, figsize=(8, 2*N))
+        
+        for idx, measure_name in enumerate(measures):
+            
+            data = np.array(self.train[measure_name])
+            
+            measure = {'mean':[], 'median':[], 'max':[], 'min':[], 'G': None}
+            
+            #-------------------------------------------------------------
+            if (data.ndim > 2):
+                data = np.concatenate(data, axis=1)
+                data = data.T
+            #-------------------------------------------------------------
+            
+            measure['mean'] = np.mean(data, axis=0)
+            measure['median'] = np.median(data, axis=0)
+            measure['max'] = np.max(data, axis=0)
+            measure['min'] = np.min(data, axis=0)
+            measure['G'] = np.arange(data.shape[1])
+            
+            self.plot_measure_evolution(measure, measure_name=measure_name, ax=ax[idx], show=False, save=False)
+            
+        
+        #--------------------------------------------------------------------
+        
+        plt.tight_layout()
+        
+        
+        if save:
+            plt.savefig(os.path.join(self.path,'evolution_of_several_measures.pdf'), dpi=300)
+            plt.savefig(os.path.join(self.path,'evolution_of_several_measures.png'), dpi=300)
+        
+        if show:
+            plt.show()
+    
+        
+        plt.close(fig)  # NO OLVIDAR ESTO PARA QUE NO QUEDE CARGADA EN MEMORIA!!!
+                        # https://heitorpb.github.io/bla/2020/03/18/close-matplotlib-figures/
+    #====================================================
+    
+    
+    
+    
+    
+    
     
     
     #@@@@@@@@@@@@@@@@@@@@@@@
@@ -1019,23 +1119,25 @@ class MULTIPLE_RUNS(object):
         #----------
         # TIEMPO
         #----------
-        for measure in TEMPLATE['TRAIN'].keys():
+        if (TEMPLATE['TRAIN'] != None):
             
-            squeezy_criterium = TEMPLATE['TRAIN'][measure]['SQUEEZE_CRITERIUM']
-            
-            for statistic in TEMPLATE['TRAIN'][measure]['STATISTICS']:
+            for measure in TEMPLATE['TRAIN'].keys():
                 
-                if (measure in self.train.available_measures()):
+                squeezy_criterium = TEMPLATE['TRAIN'][measure]['SQUEEZE_CRITERIUM']
+                
+                for statistic in TEMPLATE['TRAIN'][measure]['STATISTICS']:
                     
-                    values = self.train.get_metric(measure,
-                                                   statistic=statistic,
-                                                   squeezy_criterium=squeezy_criterium)
-                    
-                    
-                    report += '{}_{},{}\n'.format(measure,
-                                                  statistic,
-                                                  values
-                                                 )
+                    if (measure in self.train.available_measures()):
+                        
+                        values = self.train.get_metric(measure,
+                                                    statistic=statistic,
+                                                    squeezy_criterium=squeezy_criterium)
+                        
+                        
+                        report += '{}_{},{}\n'.format(measure,
+                                                    statistic,
+                                                    values
+                                                    )
                                               
         
         
@@ -1120,7 +1222,7 @@ class MULTIPLE_RUNS(object):
     
     
     #====================================================
-    def build_summary(self):
+    def plot_report(self):
         '''
         '''
         
@@ -1133,16 +1235,22 @@ class MULTIPLE_RUNS(object):
         #----------------------------------------
         # GUARDO GRAFICOS REPRESENTATIVOS
         #----------------------------------------
-        #self.plot_summary(show=False, save=True)
+        #######################################
+        # PLOT EVOLUTION OF SEVERAL MEASURES
+        #######################################
+        MEASURES = ['NUMERO_COEFICIENTES_SELECCIONADOS',
+                    'FITNESS',
+                    'SHARED_FITNESS',
+                    'OBJETIVO_0',
+                    'OBJETIVO_1',
+                    'OBJETIVO_2',
+                    'DISTANCIAS_MEDIAS',
+                    'MEDIDA_PARA_ELEGIR_EL_MEJOR_R1',
+                    'MEDIDA_PARA_ELEGIR_EL_MEJOR_R2',
+                    'CANTIDAD_DE_MUTACIONES',
+                    'CANTIDAD_DE_CLUSTERS']
         
-        
-        #----------------------------------------
-        # ALMACENO ESTADISTICAS DE LAS REPLICAS
-        #----------------------------------------
-        SUMMARY = {
-                    'train': dict(),
-                    'test': dict()
-                  }
+        self.plot_summary(measures=MEASURES, show=False, save=True)
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 

@@ -74,6 +74,18 @@ void toc() {
     tictoc_stack.pop();
 }
 
+double toc(bool verbose) {
+    
+    double elapsed = ((double)(clock() - tictoc_stack.top())) / CLOCKS_PER_SEC;
+    if (verbose) {
+        cout << "Time elapsed: "
+                << elapsed
+                << endl;
+    }          
+    tictoc_stack.pop();
+}
+
+
 double toc2() {
     
     double elapsed =  ((double)(clock() - tictoc_stack.top())) / CLOCKS_PER_SEC;
@@ -103,7 +115,22 @@ double global_toc() {
     return elapsed;
 }
 
-
+double global_toc(bool verbose) {
+    
+    double elapsed;
+    
+    if (verbose) {
+        cout << "TOTAL Time elapsed: "
+                << ((double)(clock() - global_tictoc_stack.top())) / CLOCKS_PER_SEC
+                << endl;
+    }          
+    
+    elapsed = ((double)(clock() - global_tictoc_stack.top())) / CLOCKS_PER_SEC;
+              
+    // global_tictoc_stack.pop();  comento para llamarlo en cada generacion con referencia al mismo push
+    
+    return elapsed;
+}
 
 vector <string> SplitWords(string strString)
 {

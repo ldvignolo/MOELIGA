@@ -68,13 +68,20 @@ EXPERIMENTOS_REALIZADOS = []
 for experiment in experiments:
     
     #-------------------------------------------
-    if (args['current_path'][-1] != '/'):
-        folder = args['current_path'] + '/'
+    if (args['experiment_path'][-1] != '/'):
+        folder = args['experiment_path'] + '/'
     else:
-        folder = args['current_path'] + ''
+        folder = args['experiment_path'] + ''
     
     if not os.path.exists(folder):
         os.makedirs(folder)
+        
+        # GUARDO UNA COPIA DE C++
+        os.system('7z a -t7z -mx=9 {}/c++.7z c++/configs/ c++/fitness/ c++/GA/'.format(folder))
+        
+        # GUARDO UNA COPIA DE runner_settings.yaml
+        os.system('cp runner_settings.yaml {}'.format(folder))
+        
     
     PARAMETERS = dict()
     

@@ -26,3 +26,7 @@ ubuntu:
 	$(MAKE) -C ./c++/fitness/ ubuntu
 	mv ./c++/fitness/fitness bin/
 	mv ./c++/fitness/test bin/
+ag:
+	mkdir -p bin
+	$(MAKE) -C ./c++/GA all
+	mv ./c++/GA/agp bin/
