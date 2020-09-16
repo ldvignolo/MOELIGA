@@ -2577,7 +2577,7 @@ int main(int argc, char** argv)
         ngs++;
         
         if (!AlgGen.verbose)
-        cout << "\r" << "Generacion: " << (AlgGen.gen+1);
+        cout << "\r" << "Generation: " << (AlgGen.gen+1);
         
         // *******************************************************//
         // generación(tamaño_brecha, tipo_selección, tipo_mutación);
