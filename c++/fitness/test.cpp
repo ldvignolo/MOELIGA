@@ -620,8 +620,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
 
              // Train the model.
              arma::mat trnLabelsMat, pred_one_hot;
-             trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabels+1);              
-             // model.Train(TRNdataTMP, trnLabelsMat, opt);                     
+             trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabels+1);                                
              EntrenarModelo<FFN<>> (model, TRNdataTMP, trnLabelsMat, optimizador, optim_configs);             
              model.Predict(TSTdataTMP, pred_one_hot);                          
              output.zeros(pred_one_hot.n_cols);
@@ -655,8 +654,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
              
              // Train the model.
              arma::mat trnLabelsMat, pred_one_hot;
-             trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabels+1); 
-             // model.Train(TRNdataTMP, trnLabelsMat, opt);             
+             trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabels+1);         
              EntrenarModelo<FFN<>> (model, TRNdataTMP, trnLabelsMat, optimizador, optim_configs);             
              model.Predict(TSTdataTMP, pred_one_hot);                          
              output.zeros(pred_one_hot.n_cols);

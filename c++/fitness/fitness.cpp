@@ -626,18 +626,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      int par1, par2;
                      geek >> par1;                   // layer 1 units, if 0 -> (attribs + classes) / 2, if (-1) -> (attribs + classes
                      geek >> par2;                   // layer 2 units, if 0 -> (attribs + classes) / 2, if (-1) -> (attribs + classes
-                
-                     /*
-                     int par3, par4;
-                     double par5, par6;
-                     bool par7;
-                     geek >> par3;                   // SGD epochs        :  30
-                     geek >> par4;                   // SGD batch size    :  10
-                     geek >> par5;                   // SGD training speed:  0.03
-                     geek >> par6;                   // SGD tolerance     :  1e-5
-                     geek >> par7;                   // SGD shuffle       :  true (1/0)
-                     */
-                     
+                                    
                      if (par1==0)  par1 = (TRNdataTMP.n_rows + numClasses)/2;
                      if (par1==-1) par1 = (TRNdataTMP.n_rows + numClasses); 
                      if (par2==0)  par2 = (TRNdataTMP.n_rows + numClasses)/2;
@@ -651,15 +640,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      model.Add<SigmoidLayer<> >();
                      model.Add<Linear<> >(par2, numClasses);
                      model.Add<LogSoftMax<> >();             
-                     
-                     /*
-                     size_t numEpoches = par3;
-                     size_t batchSize  = par4;                     
-                     size_t numRBMIterations = NData * numEpoches;
-                     numRBMIterations /= batchSize;
-                     ens::StandardSGD opt(par5, batchSize, numRBMIterations, par6, par7);             
-                     */
-                     
+                                         
                      // Cross Validation
                      arma::uvec trnIdx = arma::regspace<arma::uvec>(0, 1, floor(1.0-validationSize)*(NData-1));  
                      arma::uvec tstIdx = arma::regspace<arma::uvec>(0, 1, ceil(validationSize*(NData-1)));  
@@ -668,8 +649,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      arma::Row<size_t> output;                     
                      arma::mat trnLabelsMat, pred_one_hot;
                      trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabelsTMP+1);      
-                     model.ResetParameters();                     
-                     // model.Train(TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), opt);     
+                     model.ResetParameters();                      
                      EntrenarModelo<FFN<>> (model, TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), optimizador, optim_configs);                      
                      model.Predict(TRNdataTMP.cols(tstIdx), pred_one_hot);                         
                      output.zeros(pred_one_hot.n_cols);
@@ -689,20 +669,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      double par2;
                      geek >> par1;                   // number of layer 1 units / centroids
                      geek >> par2;                   // betas: The beta value to be used with centres (double, 0).
-  
-                     /*
-                     int par1, par3, par4;
-                     double par2, par5, par6;
-                     bool par7;
-                     geek >> par1;                   // number of layer 1 units / centroids
-                     geek >> par2;                   // betas: The beta value to be used with centres (double, 0).
-                     geek >> par3;                   // SGD epochs        :  30
-                     geek >> par4;                   // SGD batch size    :  10
-                     geek >> par5;                   // SGD training speed:  0.03
-                     geek >> par6;                   // SGD tolerance     :  1e-5
-                     geek >> par7;                   // SGD shuffle       :  true (1/0)
-                     */
-                     
+
                      arma::mat centroids;
                      KMeans<> kmeans;
                      kmeans.Cluster(TRNdataTMP, par1, centroids);                   // centres: The centres calculated using k-means of data (arma::mat).         
@@ -713,15 +680,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                                                                                     // outSize: The number of output units (size_t).                                                                            
                      model.Add<Linear<> >(par1, numClasses);
                      model.Add<LogSoftMax<> >();             
-                     
-                     /*
-                     size_t numEpoches = par3;
-                     size_t batchSize  = par4;
-                     size_t numRBMIterations = TRNdataTMP.n_cols * numEpoches;
-                     numRBMIterations /= batchSize;
-                     ens::StandardSGD opt(par5, batchSize, numRBMIterations, par6, par7);             
-                     */
-                     
+
                      // Cross Validation
                      arma::uvec trnIdx = arma::regspace<arma::uvec>(0, 1, floor(1.0-validationSize)*(NData-1));  
                      arma::uvec tstIdx = arma::regspace<arma::uvec>(0, 1, ceil(validationSize*(NData-1)));                                            
@@ -730,7 +689,6 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                      arma::Row<size_t> output;                                                               
                      arma::mat trnLabelsMat, pred_one_hot;                     
                      trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabelsTMP+1);
-                     // model.Train(TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), opt);  
                      EntrenarModelo<FFN<>> (model, TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), optimizador, optim_configs);                      
                      model.Predict(TRNdataTMP.cols(tstIdx), pred_one_hot);                                            
                      output.zeros(pred_one_hot.n_cols);
