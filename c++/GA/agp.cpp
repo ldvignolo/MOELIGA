@@ -2227,6 +2227,7 @@ void AG::yaml_ImprimirGen(int gener, double maxfitness, double minfitness, doubl
       }     
       
       results << endl;
+      /*
       results << "   MEDIDA_PARA_ELEGIR_EL_MEJOR_R1: [";
       for (short i=0;i<inPOB.tampob;i++) {      
            results << inPOB.individuos[i].R1;
@@ -2236,7 +2237,8 @@ void AG::yaml_ImprimirGen(int gener, double maxfitness, double minfitness, doubl
       for (short i=0;i<inPOB.tampob;i++) {      
            results << inPOB.individuos[i].R2;
            if (i<(inPOB.tampob-1)) results << ", "; else results << "]" << endl;
-      }        
+      } 
+      */
       results << "   NUMERO_DE_VECES_QUE_SE_ELIGE_CADA_FEATURE: [";
       for (short i=0;i<inPOB.lcrom;i++) {      
            results << inPOB.histograma[i];

@@ -22,26 +22,14 @@
 // mlpack includes
 
 #include <mlpack/core.hpp>
-#include <mlpack/core/data/split_data.hpp>
-#include <mlpack/methods/random_forest/random_forest.hpp>
-#include <mlpack/methods/linear_svm/linear_svm.hpp>
-#include <mlpack/methods/decision_tree/decision_tree.hpp>
-#include <mlpack/methods/naive_bayes/naive_bayes_classifier.hpp>
-#include <mlpack/methods/adaboost/adaboost.hpp>
-#include <mlpack/methods/perceptron/perceptron.hpp>
 #include <mlpack/core/data/scaler_methods/standard_scaler.hpp>
 #include <mlpack/core/data/scaler_methods/mean_normalization.hpp>
-#include <mlpack/methods/ann/layer/layer_types.hpp>
-#include <mlpack/methods/ann/layer/layer.hpp>
-#include <mlpack/methods/ann/ffn.hpp>
-#include <mlpack/methods/kmeans/kmeans.hpp>
-#include <mlpack/core/cv/simple_cv.hpp>
-// #include <mlpack/methods/decision_stump/decision_stump.hpp>
-// #include <mlpack/core/data/one_hot_encoding.hpp>
+// #include <mlpack/core/data/split_data.hpp>
+// #include <mlpack/core/cv/simple_cv.hpp>
 // #include <mlpack/core/cv/metrics/accuracy.hpp>
 
 #include "loadarff.hpp"
-#include "optim.hpp"
+#include "methods.hpp"
 
 using namespace mlpack;
 using namespace mlpack::tree;
@@ -106,92 +94,10 @@ double test(string configs, struct svm_problem datos, struct svm_model *modelo, 
 void process_mem_usage(double& vm_usage, double& resident_set);
 double distL1(arma::mat x, arma::mat y);
 double Rmeasure(arma::mat data, arma::Row<size_t> labels, float prop);
-double fUAR(arma::Row<size_t> labels, arma::Row<size_t> predictedLabels);
 
 
 /*------------------------------------------------------------------------------------------------*/
 
-
-class UAR
-{
-  public:  
-  //
-  // This evaluates the metric given a trained model and a set of data (with
-  // labels or responses) to evaluate on.  The data parameter will be a type of
-  // Armadillo matrix, and the labels will be the labels that go with the model.
-  //
-  // If you know that your model is a classification model (and thus that
-  // ResponsesType will be arma::Row<size_t>), it is ok to replace the
-  // ResponsesType template parameter with arma::Row<size_t>.
-  //
-  template<typename MLAlgorithm, typename DataType, typename ResponsesType>
-  static double Evaluate(MLAlgorithm& model,
-                         const DataType& data,
-                         const ResponsesType& labels)
-  {
-    // Inside the method you should call model.Predict() and compare the
-    // values with the labels, in order to get the desired performance measure
-    // and return it.
-      
-    arma::Row<size_t> predictedLabels;
-    model.Classify(data, predictedLabels);
-
-    
-    arma::Row<size_t> uniqueLabels = arma::unique(labels);
-    size_t numClasses = uniqueLabels.n_elem;      
-    // size_t numClasses = arma::max(labels) + 1;
-
-    arma::vec recall = arma::vec(numClasses);
-    for (size_t c = 0; c < numClasses; ++c)
-    {
-      size_t tp = arma::sum((labels == c) % (predictedLabels == c));   // el % es multiplicacion elemento a elemento en Armadillo
-
-      recall(c) = 0.0;      
-      // size_t positivePredictions = arma::sum(predictedLabels == c);
-      size_t positiveLabels = arma::sum(labels == c);
-      if ((positiveLabels>0) && (!(isnan(positiveLabels))) && (!(isinf(positiveLabels))))
-      {    
-          recall(c) = ((double) tp) / positiveLabels;
-      }  
-
-    }
-
-    return arma::mean(recall);  
-
-  }
-  
-};
-
-
-double fUAR(arma::Row<size_t> labels, arma::Row<size_t> predictedLabels)
-{
-    // Inside the method you should call model.Predict() and compare the
-    // values with the labels, in order to get the desired performance measure
-    // and return it.
-
-    arma::Row<size_t> uniqueLabels = arma::unique(labels);
-    size_t numClasses = uniqueLabels.n_elem;    
-    // size_t numClasses = arma::max(labels) + 1;
-
-    arma::vec recall = arma::vec(numClasses);
-    for (size_t c = 0; c < numClasses; ++c)
-    {
-      recall(c) = 0.0;  
-      size_t tp = arma::sum((labels == c) % (predictedLabels == c));   // el % es multiplicacion elemento a elemento en Armadillo
-      // size_t positivePredictions = arma::sum(predictedLabels == c);
-      size_t positiveLabels = arma::sum(labels == c);
-      if ((positiveLabels>0) && (!(isnan(positiveLabels))) && (!(isinf(positiveLabels))))
-      {
-         recall(c) = ((double) tp) / positiveLabels;         
-      }  
-      
-    }
-
-    return arma::mean(recall);  
-
-}
-
-/*------------------------------------------------------------------------------------------------*/
 
 
 
@@ -517,7 +423,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      arma::mat TRNdataTMP = TRNdata; // las features estan en las filas !
      TRNdataTMP.shed_rows(indices);  // ELIMINO las features indicadas en el vector     
      arma::Row<size_t> trnLabelsTMP = trnLabels;
-     size_t NData = TRNdataTMP.n_cols;
+     // size_t NData = TRNdataTMP.n_cols;
      /************************************************************************************/
     
      double cUAR = 0.0, fit_aux = 0.0, mR = 0.0;
@@ -537,186 +443,49 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
          
          if (c_eval) 
          {            
+             
+             // Stratified Cross Validation
+             arma::uvec trnIdx; // = arma::regspace<arma::uvec>(0, 1, floor(1.0-validationSize)*(NData-1));  
+             arma::uvec tstIdx; // = arma::regspace<arma::uvec>(0, 1, ceil(validationSize*(NData-1)));  
+             
+             for (size_t c=0;c<numClasses; ++c)
+             {
+                 // arma::uvec classIdx = (trnLabelsTMP == c);
+                 // size_t class_n_elem = arma::sum(classIdx);
+                 arma::uvec classIdx = arma::find(trnLabelsTMP == c);
+                 size_t class_n_elem = classIdx.n_elem;
+                 size_t n_val = ceil(validationSize*class_n_elem);
+                 size_t n_trn = class_n_elem - n_val;
+                 arma::uvec aux1 = classIdx.subvec(0,n_trn-1);
+                 arma::uvec aux2 = classIdx.subvec(n_trn,class_n_elem-1);
+                 
+                 trnIdx.insert_rows(trnIdx.n_elem, aux1);
+                 tstIdx.insert_rows(tstIdx.n_elem, aux2);
+                 
+                 aux1.clear();
+                 aux2.clear();
+             }    
+             
+             trnIdx = arma::shuffle(trnIdx); 
+             tstIdx = arma::shuffle(tstIdx);             
 
              for (size_t i=0;i<clasificadores.size();i++)
-             {                    
-                 string clasificador = clasificadores[i];
-                 std::transform(clasificador.begin(), clasificador.end(), clasificador.begin(), ::tolower);         
-                 stringstream geek(clasif_configs[i]);          
-
-                
-                 if ((clasificador == "naivebayes") || (clasificador == "nb"))
-                 {
-                     bool par1;
-                     double par2;
-                     geek >> par1; 
-                     geek >> par2; 
-                    
-                     cv::SimpleCV<mlpack::naive_bayes::NaiveBayesClassifier<>, UAR> val(validationSize, TRNdataTMP, trnLabelsTMP, numClasses); 
-                     
-                     cUAR = val.Evaluate( par1,                            //  incrementalVariance = false,
-                                          par2 );                          //  epsilon = 1e-10 
-                      
-                 }    
-                 else if (clasificador == "svm") 
-                 {
-                     double par1, par2, par5, par7;
-                     int par3, par4; 
-                     bool par6;
-                     geek >> par1; 
-                     geek >> par2; 
-                     geek >> par3;              
-                     geek >> par4; 
-                     geek >> par5; 
-                     geek >> par6;              
-                     geek >> par7;        
-                     
-                     cv::SimpleCV<mlpack::svm::LinearSVM<>, UAR> val(validationSize, TRNdataTMP, trnLabelsTMP, numClasses);                     
-
-                     cUAR = val.Evaluate( TRNdataTMP.n_rows,
-                                          par1,                             //  lambda:           L2-regularization constant.
-                                          par2,                             //  delta:            Margin of difference between correct class and other classes.
-                                          ens::ParallelSGD<>( par3,         //  maxIterations:    pSGD: Maximum number of iterations allowed (0 means no limit). (100/0)
-                                                              par4,         //  threadShareSize:  pSGD: Number of datapoints to be processed in one iteration by each thread. (10)
-                                                              par5,         //  tolerance:        pSGD: Maximum absolute tolerance to terminate the algorithm. (1e-5)
-                                                              par6,         //  shuffle:          pSGD: If true, the function order is shuffled; otherwise, each function is visited in linear order. (true)
-                                                              par7 ));      //  decayPolicy:      pSGD: The step size update policy to use. (5)                                          
-                     
-                     // cv::SimpleCV<mlpack::svm::LinearSVM<>, UAR> cv3(validationSize, TRNdataTMP, trnLabelsTMP, numClasses);  
-                     // cUAR = cv3.Evaluate(0.0001 /*lambda*/, 1.0 /*delta*/, false /*shuffle*/); 
-                     
-                 }  
-                 else if ((clasificador == "rf") || (clasificador == "randomforest"))
-                 {
-                     int par1, par2, par4;             
-                     double par3;
-                     geek >> par1; 
-                     geek >> par2; 
-                     geek >> par3; 
-                     geek >> par4; 
-
-                     cv::SimpleCV<mlpack::tree::RandomForest<>, UAR> val(validationSize, TRNdataTMP, trnLabelsTMP, numClasses);
-                     
-                     cUAR = val.Evaluate( par1,              // numTrees = 20,
-                                          par2,              // minimumLeafSize = 1,
-                                          par3,              // minimumGainSplit = 1e-7,
-                                          par4 );            // maximumDepth = 0,
-                     
-                 }               
-                 else if ((clasificador == "ada") || (clasificador == "adaboost")  || (clasificador == "ab")) 
-                 {
-                     int par1, par2;
-                     double par3;
-                     geek >> par1; 
-                     geek >> par2; 
-                     geek >> par3;  
-                     
-                     cv::SimpleCV<mlpack::adaboost::AdaBoost<>, UAR> val(validationSize, TRNdataTMP, trnLabelsTMP, numClasses);
-                     
-                     mlpack::perceptron::Perceptron<> weaklearner(par1);        // par1: train epochs             
-                     
-                     cUAR = val.Evaluate( weaklearner,                        // weak learner
-                                          par2,                               // iterations
-                                          par3);                              // tolerance     
-                     
-                 }               
-                 else if ((clasificador == "dt") || (clasificador == "decisiontree"))
-                 {
-                     int par1, par2, par3;
-                     geek >> par1; 
-                     geek >> par2; 
-                     geek >> par3;         
-                     
-                     cv::SimpleCV<mlpack::tree::DecisionTree<>, UAR> val(validationSize, TRNdataTMP, trnLabelsTMP, numClasses);
-                     
-                     cUAR = val.Evaluate( par1,               // minimum leaf size
-                                          par2,               // minimum gain split
-                                          par3);              // maximum depth     
-                     
-                 }               
-                 else if (clasificador == "mlp")    
-                 {     
-                     int par1, par2;
-                     geek >> par1;                   // layer 1 units, if 0 -> (attribs + classes) / 2, if (-1) -> (attribs + classes
-                     geek >> par2;                   // layer 2 units, if 0 -> (attribs + classes) / 2, if (-1) -> (attribs + classes
-                                    
-                     if (par1==0)  par1 = (TRNdataTMP.n_rows + numClasses)/2;
-                     if (par1==-1) par1 = (TRNdataTMP.n_rows + numClasses); 
-                     if (par2==0)  par2 = (TRNdataTMP.n_rows + numClasses)/2;
-                     if (par2==-1) par2 = (TRNdataTMP.n_rows + numClasses); 
-                     
-                     // Initialize the network.
-                     FFN<> model;
-                     model.Add<Linear<> >(TRNdataTMP.n_rows, par1);
-                     model.Add<SigmoidLayer<> >();
-                     model.Add<Linear<> >(par1, par2);
-                     model.Add<SigmoidLayer<> >();
-                     model.Add<Linear<> >(par2, numClasses);
-                     model.Add<LogSoftMax<> >();             
-                                         
-                     // Cross Validation
-                     arma::uvec trnIdx = arma::regspace<arma::uvec>(0, 1, floor(1.0-validationSize)*(NData-1));  
-                     arma::uvec tstIdx = arma::regspace<arma::uvec>(0, 1, ceil(validationSize*(NData-1)));  
-
-                     // Train the model.                      
-                     arma::Row<size_t> output;                     
-                     arma::mat trnLabelsMat, pred_one_hot;
-                     trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabelsTMP+1);      
-                     model.ResetParameters();                      
-                     EntrenarModelo<FFN<>> (model, TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), optimizador, optim_configs);                      
-                     model.Predict(TRNdataTMP.cols(tstIdx), pred_one_hot);                         
-                     output.zeros(pred_one_hot.n_cols);
-                     // Find index of max prediction for each data point and store in "prediction"
-                     for (size_t p = 0; p < pred_one_hot.n_cols; ++p)
-                     {
-                        output(p) = arma::as_scalar(arma::find(arma::max(pred_one_hot.col(p)) == pred_one_hot.col(p), 1));                 
-                     }                              
-                     pred_one_hot.clear();
-                     cUAR = fUAR(trnLabelsTMP.cols(tstIdx),output);
-                     
-                 }                       
-                 else if (clasificador == "rbf")
-                 {                     
-                     
-                     int par1;
-                     double par2;
-                     geek >> par1;                   // number of layer 1 units / centroids
-                     geek >> par2;                   // betas: The beta value to be used with centres (double, 0).
-
-                     arma::mat centroids;
-                     KMeans<> kmeans;
-                     kmeans.Cluster(TRNdataTMP, par1, centroids);                   // centres: The centres calculated using k-means of data (arma::mat).         
-                     
-                     // Initialize the network.
-                     FFN<> model;
-                     model.Add<RBF<> >(TRNdataTMP.n_rows, par1, centroids, par2);   // inSize: The number of input units (size_t).
-                                                                                    // outSize: The number of output units (size_t).                                                                            
-                     model.Add<Linear<> >(par1, numClasses);
-                     model.Add<LogSoftMax<> >();             
-
-                     // Cross Validation
-                     arma::uvec trnIdx = arma::regspace<arma::uvec>(0, 1, floor(1.0-validationSize)*(NData-1));  
-                     arma::uvec tstIdx = arma::regspace<arma::uvec>(0, 1, ceil(validationSize*(NData-1)));                                            
-                     
-                     // Train the model.
-                     arma::Row<size_t> output;                                                               
-                     arma::mat trnLabelsMat, pred_one_hot;                     
-                     trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabelsTMP+1);
-                     EntrenarModelo<FFN<>> (model, TRNdataTMP.cols(trnIdx), trnLabelsMat.cols(trnIdx), optimizador, optim_configs);                      
-                     model.Predict(TRNdataTMP.cols(tstIdx), pred_one_hot);                                            
-                     output.zeros(pred_one_hot.n_cols);
-                     // Find index of max prediction for each data point and store in "prediction"
-                     for (size_t p = 0; p < pred_one_hot.n_cols; ++p)
-                     {
-                        output(p) = arma::as_scalar(arma::find(arma::max(pred_one_hot.col(p)) == pred_one_hot.col(p), 1));                 
-                     }                              
-                     pred_one_hot.clear();                     
-                     cUAR = fUAR(trnLabelsTMP.cols(tstIdx),output);                     
-                     
-                 }                      
+             {   
+                 
+                 arma::Row<size_t> output;
+                 
+                 output = TrainTestClassifier(TRNdataTMP.cols(trnIdx),  TRNdataTMP.cols(tstIdx), trnLabelsTMP.cols(trnIdx), clasificadores[i], clasif_configs[i], optimizador, optim_configs, false);
+                 
+                 cUAR = fUAR(trnLabelsTMP.cols(tstIdx), output);
                  fit_aux = fit_aux + cUAR;                 
+                 cUAR = 0.0;
+                 
              }
+             
              fit_aux = fit_aux / clasificadores.size();
+             
+             trnIdx.clear();
+             tstIdx.clear();
             
          } else fit_aux = 0.0;
          
@@ -728,15 +497,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      }     
      fit_aux = fit_aux / ntest;
      
-     if ((isnan(fit_aux)) || (isinf(fit_aux))){
-          // cout << " ---------------------------> NAN! - Features: "<< TRNdataTMP.n_rows << endl; 
-          fit_aux = 0.0;
-     }   
-     /*
-     if (TRNdataTMP.n_rows == 0){
-         cout << " ---------------------------> #<># - 0 Features: "<< fit_aux << endl; 
-     } 
-     */
+     if ((isnan(fit_aux)) || (isinf(fit_aux))) fit_aux = 0.0;  // ya no deberia pasar con particionamiento estratificado, pero por las dudas
      
      aptitude[0] = fit_aux;
      

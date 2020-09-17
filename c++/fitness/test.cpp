@@ -23,30 +23,17 @@
 // mlpack includes
 
 #include <mlpack/core.hpp>
-#include <mlpack/core/data/split_data.hpp>
-#include <mlpack/methods/random_forest/random_forest.hpp>
-#include <mlpack/methods/linear_svm/linear_svm.hpp>
-#include <mlpack/methods/naive_bayes/naive_bayes_classifier.hpp>
-#include <mlpack/methods/decision_tree/decision_tree.hpp>
-#include <mlpack/methods/adaboost/adaboost.hpp>
-#include <mlpack/methods/perceptron/perceptron.hpp>
 #include <mlpack/core/data/scaler_methods/standard_scaler.hpp>
 #include <mlpack/core/data/scaler_methods/mean_normalization.hpp>
-#include <mlpack/methods/ann/layer/layer.hpp>
-#include <mlpack/methods/ann/layer/layer_types.hpp>
-#include <mlpack/methods/ann/ffn.hpp>
-#include <mlpack/methods/kmeans/kmeans.hpp>
-// #include <mlpack/methods/decision_stump/decision_stump.hpp>
+// #include <mlpack/core/data/split_data.hpp>
+
 // #include <mlpack/core/cv/k_fold_cv.hpp>
 // #include <mlpack/core/data/one_hot_encoding.hpp>
 // #include <mlpack/core/cv/metrics/accuracy.hpp>
 
 
-
-
-
 #include "loadarff.hpp"
-#include "optim.hpp"
+#include "methods.hpp"
 
 using namespace mlpack;
 using namespace mlpack::tree;
@@ -101,7 +88,6 @@ arma::mat TSTdata;
 arma::Row<size_t> trnLabels, tstLabels;
 
 
-double fUAR(arma::Row<size_t> labels, arma::Row<size_t> predictedLabels);
 void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double alpha, double beta, int NObjectives);
 void process_mem_usage(double& vm_usage, double& resident_set);
 arma::mat MC(arma::Row<size_t> labels, arma::Row<size_t> predictedLabels);
@@ -366,30 +352,6 @@ void process_mem_usage(double& vm_usage, double& resident_set)
 
 
 
-double fUAR(arma::Row<size_t> labels, arma::Row<size_t> predictedLabels)
-{
-    // Inside the method you should call model.Predict() and compare the
-    // values with the labels, in order to get the desired performance measure
-    // and return it.
-
-    arma::Row<size_t> uniqueLabels = arma::unique(labels);
-    size_t numClasses = uniqueLabels.n_elem;    
-    // size_t numClasses = arma::max(labels) + 1;
-
-    arma::vec recall = arma::vec(numClasses);
-    for (size_t c = 0; c < numClasses; ++c)
-    {
-      recall(c) = 0.0;  
-      size_t tp = arma::sum((labels == c) % (predictedLabels == c));   // el % es multiplicacion elemento a elemento en Armadillo      
-      size_t positiveLabels = arma::sum(labels == c);
-      if ((positiveLabels>0) && (!(isnan(positiveLabels))) && (!(isinf(positiveLabels))))
-         recall(c) = ((double) tp) / positiveLabels;        
-    } 
-
-    return arma::mean(recall);  
-
-}
-
 arma::mat MC(arma::Row<size_t> labels, arma::Row<size_t> predictedLabels)
 {
     // Inside the method you should call model.Predict() and compare the
@@ -487,187 +449,12 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
      cout << "  \"CLASIFICADORES\": {" << endl;
      
      for (size_t i=0;i<clasificadores.size();i++)
-     {    
-         tic();
+     {            
          arma::Row<size_t> output;
-         string clasificador = clasificadores[i];
-         std::transform(clasificador.begin(), clasificador.end(), clasificador.begin(), ::tolower);         
-         stringstream geek(clasif_configs[i]);          
          string offset = string(25, ' ');
-         
-         if ((clasificador == "naivebayes") || (clasificador == "nb"))
-         {
-             cout << offset << "\"NaiveBayes\":" << endl;   
-             bool par1;
-             double par2;
-             geek >> par1; 
-             geek >> par2; 
-         
-             mlpack::naive_bayes::NaiveBayesClassifier<> method (TRNdataTMP,                      //  Independent variables  
-                                                                 trnLabels,                       //  Dependent variables                                             
-                                                                 numClasses,                      //  number of classes  
-                                                                 par1,                            //  incrementalVariance = false,
-                                                                 par2 );                          //  epsilon = 1e-10 
-
-             method.Classify(TSTdataTMP, output);  
-         
-         }
-         else if (clasificador == "svm") 
-         {
-             cout << offset << "\"SVM\":" << endl;   
-             double par1, par2, par5, par7;
-             int par3, par4; 
-             bool par6;
-             geek >> par1; 
-             geek >> par2; 
-             geek >> par3;              
-             geek >> par4; 
-             geek >> par5; 
-             geek >> par6;              
-             geek >> par7;              
-             
-             // mlpack::svm::LinearSVM<> method( TRNdataTMP, trnLabels, numClasses, par1, par2, true);          
-            
-             mlpack::svm::LinearSVM<> method(TRNdataTMP,                      //  Independent variables  
-                                             trnLabels,                       //  Dependent variables                                             
-                                             numClasses,                      //  number of classes  
-                                             TRNdataTMP.n_rows,               //  number of features
-                                             par1,                            //  lambda:           L2-regularization constant.
-                                             par2,                            //  delta:            Margin of difference between correct class and other classes.
-                                             ens::ParallelSGD<>(par3,         // (int) maxIterations:    pSGD: Maximum number of iterations allowed (0 means no limit). (100/0)
-                                                                par4,         // (int) threadShareSize:  pSGD: Number of datapoints to be processed in one iteration by each thread. (10)
-                                                                par5,         // (dbl) tolerance:        pSGD: Maximum absolute tolerance to terminate the algorithm. (1e-5)
-                                                                par6,         // (boo) shuffle:          pSGD: If true, the function order is shuffled; otherwise, each function is visited in linear order. (true)
-                                                                par7));       // (dbl) decayPolicy:      pSGD: The step size update policy to use. (5)
-             
-             method.Classify(TSTdataTMP, output);  
-             
-         }
-         else if ((clasificador == "rf") || (clasificador == "randomforest"))
-         {
-             cout << offset << "\"RandomForest\":" << endl;  
-             int par1, par2, par4;             
-             double par3;
-             geek >> par1; 
-             geek >> par2; 
-             geek >> par3; 
-             geek >> par4; 
-             mlpack::tree::RandomForest<> method( TRNdataTMP,        // Independent variables  
-                                                  trnLabels,         // Dependent variables
-                                                  numClasses,        // number of classes                                                 
-                                                  par1,              // numTrees = 20,
-                                                  par2,              // minimumLeafSize = 1,
-                                                  par3,              // minimumGainSplit = 1e-7,
-                                                  par4);             // maximumDepth = 0,
-             method.Classify(TSTdataTMP, output);                                                 
-         }
-         else if ((clasificador == "ada") || (clasificador == "adaboost") || (clasificador == "ab"))
-         {             
-             cout << offset <<"\"AdaBoost\":" << endl;  
-             int par1, par2;
-             double par3;
-             geek >> par1; 
-             geek >> par2; 
-             geek >> par3;                            
-             
-             mlpack::perceptron::Perceptron<> weaklearner(par1);            // par1: train epochs             
-             // mlpack::decision_stump::DecisionStump<> weaklearner();             
-             // mlpack::tree::DecisionTree<> weaklearner();
-             
-             mlpack::adaboost::AdaBoost<> method( TRNdataTMP,               // Independent variables  
-                                                  trnLabels,                // Dependent variables
-                                                  numClasses,               // number of classes
-                                                  weaklearner,              // weak learner
-                                                  par2,                     // iterations
-                                                  par3);                    // tolerance     
-             method.Classify(TSTdataTMP, output);             
-         }
-         else if ((clasificador == "dt") || (clasificador == "decisiontree"))
-         {
-             cout << offset << "\"DecisionTree\":" << endl;             
-             int par1, par2, par3;
-             geek >> par1; 
-             geek >> par2; 
-             geek >> par3;         
-             mlpack::tree::DecisionTree<> method( TRNdataTMP,         // Independent variables
-                                                  trnLabels,          // Dependent variables
-                                                  numClasses,         // number of classes
-                                                  par1,               // minimum leaf size
-                                                  par2,               // minimum gain split 
-                                                  par3);              // maximum depth     
-             method.Classify(TSTdataTMP, output);
-         }               
-         else if (clasificador == "mlp") 
-         {
-             cout << offset << "\"MLP\":" << endl;
-             
-             int par1, par2;
-             geek >> par1;                   // layer 1 units, if 0 -> (attribs + classes) / 2, if (-1) -> (attribs + classes) 
-             geek >> par2;                   // layer 2 units, if 0 -> (attribs + classes) / 2, if (-1) -> (attribs + classes) 
-             
-             if (par1==0)  par1 = (TRNdataTMP.n_rows + numClasses)/2;
-             if (par1==-1) par1 = (TRNdataTMP.n_rows + numClasses); 
-             if (par2==0)  par2 = (TRNdataTMP.n_rows + numClasses)/2;
-             if (par2==-1) par2 = (TRNdataTMP.n_rows + numClasses); 
-         
-             // Initialize the network.
-             FFN<> model;
-             model.Add<Linear<> >(TRNdataTMP.n_rows, par1);
-             model.Add<SigmoidLayer<> >();
-             model.Add<Linear<> >(par1, par2);
-             model.Add<SigmoidLayer<> >();
-             model.Add<Linear<> >(par2, numClasses);
-             model.Add<LogSoftMax<> >();             
-
-             // Train the model.
-             arma::mat trnLabelsMat, pred_one_hot;
-             trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabels+1);                                
-             EntrenarModelo<FFN<>> (model, TRNdataTMP, trnLabelsMat, optimizador, optim_configs);             
-             model.Predict(TSTdataTMP, pred_one_hot);                          
-             output.zeros(pred_one_hot.n_cols);
-             // Find index of max prediction for each data point and store in "prediction"
-             for (size_t p = 0; p < pred_one_hot.n_cols; ++p)
-             {
-                output(p) = arma::as_scalar(arma::find(arma::max(pred_one_hot.col(p)) == pred_one_hot.col(p), 1));                 
-             }                              
-             pred_one_hot.clear();
-
-         }         
-         else if (clasificador == "rbf") 
-         {
-             cout << offset << "\"RBF\":" << endl;
-
-             int par1;
-             double par2;
-             geek >> par1;                   // number of layer 1 units / centroids
-             geek >> par2;                   // betas: The beta value to be used with centres (double, 0).
-                     
-             arma::mat centroids;
-             KMeans<> kmeans;
-             kmeans.Cluster(TRNdataTMP, par1, centroids);                   // centres: The centres calculated using k-means of data (arma::mat).         
-             
-             // Initialize the network.
-             FFN<> model;
-             model.Add<RBF<> >(TRNdataTMP.n_rows, par1, centroids, par2);   // inSize: The number of input units (size_t).
-                                                                            // outSize: The number of output units (size_t).                                                                            
-             model.Add<Linear<> >(par1, numClasses);
-             model.Add<LogSoftMax<> >();             
-             
-             // Train the model.
-             arma::mat trnLabelsMat, pred_one_hot;
-             trnLabelsMat = arma::conv_to<arma::mat>::from(trnLabels+1);         
-             EntrenarModelo<FFN<>> (model, TRNdataTMP, trnLabelsMat, optimizador, optim_configs);             
-             model.Predict(TSTdataTMP, pred_one_hot);                          
-             output.zeros(pred_one_hot.n_cols);
-             // Find index of max prediction for each data point and store in "prediction"
-             for (size_t p = 0; p < pred_one_hot.n_cols; ++p)
-             {
-                output(p) = arma::as_scalar(arma::find(arma::max(pred_one_hot.col(p)) == pred_one_hot.col(p), 1));                 
-             }                              
-             pred_one_hot.clear();
-
-         }
-         
+         tic();
+           
+         output = TrainTestClassifier(TRNdataTMP, TSTdataTMP, trnLabels, clasificadores[i], clasif_configs[i], optimizador, optim_configs, true);
                    
          double elapsed = toc2(); 
          double uar = fUAR(tstLabels,output);         
