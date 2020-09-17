@@ -145,9 +145,14 @@ class UAR
     for (size_t c = 0; c < numClasses; ++c)
     {
       size_t tp = arma::sum((labels == c) % (predictedLabels == c));   // el % es multiplicacion elemento a elemento en Armadillo
+      // if ((isnan(tp)) && (isinf(tp))) tp = 0;
+
+      recall(c) = 0.0;      
       // size_t positivePredictions = arma::sum(predictedLabels == c);
       size_t positiveLabels = arma::sum(labels == c);
-      recall(c) = double(tp) / positiveLabels;
+      if ((positiveLabels>0) && (!(isnan(positiveLabels))) && (!(isinf(positiveLabels))))
+        recall(c) = ((double) tp) / positiveLabels;
+
     }
 
     return arma::mean(recall);  
@@ -170,10 +175,16 @@ double fUAR(arma::Row<size_t> labels, arma::Row<size_t> predictedLabels)
     arma::vec recall = arma::vec(numClasses);
     for (size_t c = 0; c < numClasses; ++c)
     {
+      recall(c) = 0.0;  
       size_t tp = arma::sum((labels == c) % (predictedLabels == c));   // el % es multiplicacion elemento a elemento en Armadillo
+      // if ((isnan(tp)) && (isinf(tp))) tp = 0;
       // size_t positivePredictions = arma::sum(predictedLabels == c);
       size_t positiveLabels = arma::sum(labels == c);
-      recall(c) = double(tp) / positiveLabels;
+      if ((positiveLabels>0) && (!(isnan(positiveLabels))) && (!(isinf(positiveLabels)))){
+        recall(c) = ((double) tp) / positiveLabels;
+         // cout << " ################################################################"<<endl;
+      }  // else cout << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"<<endl;
+      
     }
 
     return arma::mean(recall);  
@@ -522,6 +533,8 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
          data_aux.clear();                   
          auxLabels.clear();             
          
+         cUAR = 0.0;
+         
          if (c_eval) 
          {            
 
@@ -714,6 +727,15 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
      
      }     
      fit_aux = fit_aux / ntest;
+     
+     if ((isnan(fit_aux)) || (isinf(fit_aux))){
+          cout << " ---------------------------> NAN! - Features: "<< TRNdataTMP.n_rows << endl; 
+     }
+     
+     if (TRNdataTMP.n_rows == 1){
+          cout << " ---------------------------> ### - 1 Feature: "<< fit_aux << endl; 
+     }
+     
      
      aptitude[0] = fit_aux;
      

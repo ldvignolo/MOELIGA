@@ -2160,8 +2160,7 @@ void AG::yaml_ImprimirGen(int gener, double maxfitness, double minfitness, doubl
       
       double caux=0.0;
       for (size_t i=0;i<clusters.size();i++) caux=caux+clusters[i].size();
-      caux=caux/clusters.size();         
-          
+      if (clusters.size()>0) caux=caux/clusters.size();                   
       
       results << "#####################################"  << endl;
       results << "- GENERATION: " << gener << endl << endl;

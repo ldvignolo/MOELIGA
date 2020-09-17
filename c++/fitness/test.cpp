@@ -379,11 +379,14 @@ double fUAR(arma::Row<size_t> labels, arma::Row<size_t> predictedLabels)
     arma::vec recall = arma::vec(numClasses);
     for (size_t c = 0; c < numClasses; ++c)
     {
+      recall(c) = 0.0;  
       size_t tp = arma::sum((labels == c) % (predictedLabels == c));   // el % es multiplicacion elemento a elemento en Armadillo
+      // if ((isnan(tp)) && (isinf(tp))) tp = 0;
       // size_t positivePredictions = arma::sum(predictedLabels == c);
       size_t positiveLabels = arma::sum(labels == c);
-      recall(c) = double(tp) / positiveLabels;
-    }
+      if ((positiveLabels>0) && (!(isnan(positiveLabels))) && (!(isinf(positiveLabels)))){
+        recall(c) = ((double) tp) / positiveLabels;        
+      } 
 
     return arma::mean(recall);  
 
