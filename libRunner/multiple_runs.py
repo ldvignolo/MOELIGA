@@ -1113,7 +1113,8 @@ class MULTIPLE_RUNS(object):
         #================
         # TRAIN
         #================
-        report += 'TRAIN,\n'
+        if (TEMPLATE['TRAIN'] != None):
+            report += 'TRAIN,\n'
         
         
         #----------
@@ -1144,6 +1145,8 @@ class MULTIPLE_RUNS(object):
         #================
         # TEST
         #================
+        #if (TEMPLATE['TRAIN'] != None):
+            #report += 'TEST,\n'
         report += 'TEST,\n'
         
         for criterium in self.test.keys():
@@ -1245,8 +1248,8 @@ class MULTIPLE_RUNS(object):
                     'OBJETIVO_1',
                     'OBJETIVO_2',
                     'DISTANCIAS_MEDIAS',
-                    'MEDIDA_PARA_ELEGIR_EL_MEJOR_R1',
-                    'MEDIDA_PARA_ELEGIR_EL_MEJOR_R2',
+                    #'MEDIDA_PARA_ELEGIR_EL_MEJOR_R1',
+                    #'MEDIDA_PARA_ELEGIR_EL_MEJOR_R2',
                     'CANTIDAD_DE_MUTACIONES',
                     'CANTIDAD_DE_CLUSTERS']
         

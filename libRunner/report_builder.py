@@ -135,6 +135,41 @@ def construir_reporte(root_path, runner_settings):
                      index_col=0)
     
     df.to_excel(os.path.join(root_path, 'final_report.xlsx'))
+    
+    #---------------------------------------------------------------
+    
+    idxs = [idx for idx,label in enumerate(df.index) if 'CRITERIO' in label]
+    
+    sheets = []
+    for i in range(len(idxs)):
+        
+        if (i+1 == len(idxs)):
+            sheets.append(pd.DataFrame(df[idxs[i]+1:], columns=df.columns))
+        
+        else:
+            sheets.append(pd.DataFrame(df[idxs[i]+1:idxs[i+1]], columns=df.columns))
+
+    
+    # Create a Pandas Excel writer using XlsxWriter as the engine.
+    writer = pd.ExcelWriter(os.path.join(root_path, 'final_report_multiple_sheets.xlsx'))  #, engine='xlsxwriter')
+    
+    # Write each dataframe to a different worksheet.
+    for i,sheet in enumerate(sheets):
+        
+        label = df.index[idxs[i]]
+        
+        sheet.to_excel(writer, sheet_name='{}'.format(label))
+    
+    
+    # Close the Pandas Excel writer and output the Excel file.
+    writer.save()
+    
+    
+    
+    
+    
+    
+    
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 

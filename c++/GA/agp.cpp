@@ -2641,12 +2641,14 @@ int main(int argc, char** argv)
     } while ((AlgGen.gen < AlgGen.maxgen) & (count<( (short) AlgGen.maxgen* (((float) steady) / 100)) ));
     if (!AlgGen.verbose) cout << endl;
     
-    // hago el plot de la corrida
+    /* // Deprecated
+     * // hago el plot de la corrida
     if (!yaml) {
        cmd = "python3 Plot4MOELIGA.py ";
        cmd.insert(cmd.length(), filename); 
        bar = system(cmd.c_str());
     } 
+    */
     
     // ejecuto el test con los cromosomas del Frente 
     cmd = testbin.c_str();

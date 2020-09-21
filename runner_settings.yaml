@@ -6,6 +6,7 @@
   #NObjetivos: [2,3]
   #Obj2Sigmod: [True]
   #SigmLambda: [5.0,0.9,1.5,5.0]
+  SigmaShare: [0.04, 0.08, 0.15]
   
 
  DEPENDENCIAS:

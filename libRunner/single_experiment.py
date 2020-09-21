@@ -1006,8 +1006,8 @@ class SINGLE_EXPERIMENT(object):
                     ('GENERAL','OBJETIVO_1'),
                     ('GENERAL','OBJETIVO_2'),
                     ('GENERAL','DISTANCIAS_MEDIAS'),
-                    ('GENERAL','MEDIDA_PARA_ELEGIR_EL_MEJOR_R1'),
-                    ('GENERAL','MEDIDA_PARA_ELEGIR_EL_MEJOR_R2'),
+                    #('GENERAL','MEDIDA_PARA_ELEGIR_EL_MEJOR_R1'),
+                    #('GENERAL','MEDIDA_PARA_ELEGIR_EL_MEJOR_R2'),
                     ('GENERAL','CANTIDAD_DE_MUTACIONES'),
                     ('GENERAL','CANTIDAD_DE_CLUSTERS'),
                     ('PARETO','MEAN_DISTANCE')] # --> PARETO]
