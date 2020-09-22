@@ -76,13 +76,6 @@ for experiment in experiments:
     if not os.path.exists(folder):
         os.makedirs(folder)
         
-        # GUARDO UNA COPIA DE C++
-        os.system('7z a -t7z -mx=9 {}/c++.7z c++/configs/ c++/fitness/ c++/GA/'.format(folder))
-        
-        # GUARDO UNA COPIA DE runner_settings.yaml
-        os.system('cp runner_settings.yaml {}'.format(folder))
-        
-    
     PARAMETERS = dict()
     
     # FILTRO LO QUE NO SE MODIFICA POR FALSE
@@ -239,9 +232,27 @@ log_line = 'Finishing on {}\n\n'.format(ending_run_time)
 print(log_line)
 LOG += log_line
 
+root_folder = args['experiment_path'].replace('/','')
 
 #--------------------
 # SAVING LOG REPORT
 #--------------------
-with open('log_{}.txt'.format(starting_run_time), 'w') as fp:
+with open('{}/log_{}.txt'.format(root_folder,starting_run_time), 'w') as fp:
     fp.write(LOG)
+
+#--------------------------
+# GUARDO UNA COPIA DE C++
+#--------------------------
+os.system('7z a -t7z -mx=9 {}/c++.7z c++/configs/ c++/fitness/ c++/GA/'.format(root_folder))
+
+#--------------------------------------------
+# GUARDO UNA COPIA DE runner_settings.yaml
+#--------------------------------------------
+os.system('cp runner_settings.yaml {}'.format(root_folder))
+
+
+#--------------------------------------------
+# Nofifico
+#--------------------------------------------
+
+import notification.py
