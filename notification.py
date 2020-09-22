@@ -1,7 +1,7 @@
 import json
 import telegram
 def notify_ending(message):
-    with open('keys.json', 'r') as keys_file:
+    with open('telegram.json', 'r') as keys_file:
         k = json.load(keys_file)
         token = k['telegram_token']
         chat_id = k['telegram_chat_id']
