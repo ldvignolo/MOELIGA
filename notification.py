@@ -1,6 +1,7 @@
 import json
 import telegram
-def notify_ending(message):
+
+def notify(message):
     with open('telegram.json', 'r') as keys_file:
         k = json.load(keys_file)
         token = k['telegram_token']
@@ -8,4 +9,4 @@ def notify_ending(message):
     bot = telegram.Bot(token=token)
     bot.sendMessage(chat_id=chat_id, text=message)
     
-notify_ending("Finalizó la corrida")
+

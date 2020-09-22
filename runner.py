@@ -18,6 +18,7 @@ parser.add_argument('-s', '--experiment_settings', default='runner_settings.yaml
 parser.add_argument('-e', '--eliga_settings', default=None, help='Settings file for ELIGA.')
 parser.add_argument('-p', '--experiment_path', default='out/', help='Path to output results. By default it is "out/".')
 parser.add_argument('-r', '--repetitions', default=10, help='Number of times that the same parameters must be evaluated.')
+parser.add_argument('-n', '--notification', action='store_true', help='Telegram notification.')
 
 args = vars(parser.parse_args())
 #=====================================================
@@ -252,7 +253,9 @@ os.system('cp runner_settings.yaml {}'.format(root_folder))
 
 
 #--------------------------------------------
-# Nofifico
+# Notifico
 #--------------------------------------------
 
-import notification.py
+if (args['notification']):
+    import notification
+    notification.notify("La instancia de runner " + args['experiment_path'] + " ha finalizado.")

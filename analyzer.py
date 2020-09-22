@@ -9,9 +9,9 @@ parser = argparse.ArgumentParser(description='Tool to analyze multiple experimen
 parser.add_argument('-p', '--experiment_path', default='out/', help='Path to output results. By default it is "out/".')
 parser.add_argument('-s', '--experiment_settings', default='runner_settings.yaml', help='Settings file to configure this tool.')
 parser.add_argument('-l', '--library_path', default='libRunner/', help='Specify path to libRunner library.')
+parser.add_argument('-n', '--notification', action='store_true', help='Telegram notification.')
 args = vars(parser.parse_args())
 #=====================================================
-
 
 
 
@@ -47,3 +47,12 @@ print('--------------------------------\n\n')
 
 
 #=============================================================================
+
+#--------------------------------------------
+# Notifico
+#--------------------------------------------
+
+if (args['notification']):
+    import notification
+    notification.notify("La instancia de analyzer " + args['experiment_path'] + " ha finalizado.")
+
