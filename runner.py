@@ -23,6 +23,9 @@ parser.add_argument('-n', '--notification', action='store_true', help='Telegram 
 args = vars(parser.parse_args())
 #=====================================================
 
+RUN_ALGORITHM = True  # Esta bandera permite habilitar/deshabilitar la
+                      # ejecución del algoritmo. Es útil para hacer pruebas
+                      # en la construcción de los paths y manejo de archivos.
 
 
 #----------------------
@@ -192,8 +195,9 @@ for experiment in experiments:
             #·············
             _,eliga_settings = os.path.split(args['eliga_settings'])
             current_path = os.path.join(output_folder, eliga_settings)
-            #full_path = os.path.abspath(current_path)
-            os.system('./bin/agp cfg {}'.format(current_path))
+            
+            if RUN_ALGORITHM:
+                os.system('./bin/agp cfg {}'.format(current_path))
             
             
             #·····································
@@ -233,7 +237,13 @@ log_line = 'Finishing on {}\n\n'.format(ending_run_time)
 print(log_line)
 LOG += log_line
 
-root_folder = args['experiment_path'].replace('/','')
+
+
+if (args['experiment_path'][-1] != '/'):
+    root_folder = args['experiment_path'] + '/'
+else:
+    root_folder = args['experiment_path'] + ''
+
 
 #--------------------
 # SAVING LOG REPORT
