@@ -125,8 +125,12 @@ def construir_reporte(root_path, runner_settings):
     
     with open(os.path.join(root_path, 'final_report.csv'), 'w') as fp:
         
-        for R in RESULTADOS:
-            fp.write(R[:-1] + '\n')
+        for i,R in enumerate(RESULTADOS):
+            
+            if (i < len(parameters)):
+                fp.write(R + '\n')
+            else:
+                fp.write(R[:-1] + '\n')
         
         
     df = pd.read_csv(os.path.join(root_path, 'final_report.csv'),

@@ -2451,7 +2451,7 @@ int main(int argc, char** argv)
     AlgGen.alfa_share  = SETTINGS.get_dbl("AlfaShare");
     AlgGen.dist_opt = SETTINGS.get_int("dist_opt");
     bool onlyBest = false;
-    onlyBest = SETTINGS.get_bool("onlyBest");
+    // onlyBest = SETTINGS.get_bool("onlyBest");
     AlgGen.activ_rate_sp = SETTINGS.get_dbl("TasaActivacionSubPob");
     AlgGen.ModifyRepeated = SETTINGS.get_bool("ModifyRepeated");
     AlgGen.FitnessOption = SETTINGS.get_int("FitnessOption");

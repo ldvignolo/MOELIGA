@@ -9,6 +9,7 @@ import io
 #import streamlit as st
 import matplotlib.pyplot as plt
 from matplotlib import cm
+import matplotlib
 import seaborn as sns
 from celluloid import Camera
 
@@ -677,11 +678,13 @@ class SINGLE_EXPERIMENT(object):
             plt.show()
         
         if save:
-            animation.save(os.path.join(self.path,'pareto_front_animated.gif'),
+            with matplotlib.use('Agg'):
+                animation.save(os.path.join(self.path,'pareto_front_animated.gif'),
                            writer='imagemagick')
-    
-    
-    
+        #if save:
+            #animation.save(os.path.join(self.path,'pareto_front_animated.gif'),
+                           #writer='imagemagick')
+                   
     
     
     
@@ -1036,7 +1039,7 @@ class SINGLE_EXPERIMENT(object):
         
         
         # ANIMACION DEL FRENTE DE PARETO
-        self.plot_pareto_front_animated(show=False, save=True)
+        #self.plot_pareto_front_animated(show=False, save=True)
     
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
