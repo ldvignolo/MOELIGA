@@ -4,6 +4,7 @@ import glob
 import numpy as np
 import pandas as pd
 import yaml
+import xlsxwriter # no es necesario importarlo, pero lo hago para que si no esta salte el error al inicio y no despues
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -138,7 +139,7 @@ def construir_reporte(root_path, runner_settings):
                      header=[i for i in range(len(parameters))],
                      index_col=0)
     
-    df.to_excel(os.path.join(root_path, 'final_report.xlsx'))
+    # df.to_excel(os.path.join(root_path, 'final_report.xlsx'))
     
     #---------------------------------------------------------------
     
@@ -152,18 +153,40 @@ def construir_reporte(root_path, runner_settings):
         
         else:
             sheets.append(pd.DataFrame(df[idxs[i]+1:idxs[i+1]], columns=df.columns))
-
-    
-    # Create a Pandas Excel writer using XlsxWriter as the engine.
-    writer = pd.ExcelWriter(os.path.join(root_path, 'final_report_multiple_sheets.xlsx'))  #, engine='xlsxwriter')
-    
-    # Write each dataframe to a different worksheet.
-    for i,sheet in enumerate(sheets):
         
+    #from pandas.io.formats import excel
+    #excel.header_style = None    
+
+    # Create a Pandas Excel writer using XlsxWriter as the engine.    
+    writer = pd.ExcelWriter(os.path.join(root_path, 'final_report.xlsx'), engine='xlsxwriter')
+    workbook  = writer.book
+    
+    # formato1 = workbook.add_format({'align': 'left'})
+    formato1 = workbook.add_format({'bold': True, 'text_wrap': True, 'align': 'left', 'fg_color': '#D7E4BC', 'border': 1, 'bg_color':'#B1B3B3'})
+    #formato1 = workbook.add_format()
+    #formato1.set_align('left')
+    formato2 = workbook.add_format({'num_format': '#,####0.0000', 'align': 'center'})
+        
+    for i,sheet in enumerate(sheets):        
+       
         label = df.index[idxs[i]]
         
-        sheet.to_excel(writer, sheet_name='{}'.format(label))
-    
+        sheet.to_excel(writer, sheet_name='{}'.format(label), header=True, startcol=0)
+        
+        worksheet = writer.sheets[label]        
+                
+        first_col_width=0
+        for idx, col in enumerate(df.index):  
+            if (len(col)>first_col_width):
+                first_col_width = len(col)+4            
+                
+        worksheet.set_column('A:A', first_col_width, formato1)          
+
+        for idx, col in enumerate(df):  
+            col_width = len(col[-1])+2
+            j=idx+1
+            worksheet.set_column(j, j, col_width, formato2)      
+            
     
     # Close the Pandas Excel writer and output the Excel file.
     writer.save()

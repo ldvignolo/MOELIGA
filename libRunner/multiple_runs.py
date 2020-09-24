@@ -169,7 +169,11 @@ class CLASIFIER(object):
     def calculate_confidence_interval(self, data, alpha=0.05):
         '''
         REFERENCIA: https://rpubs.com/acatania/396921
+                    https://stackoverrun.com/es/q/5277580
         
+        Walpole, Myers, Myesr, 'Probabilidad y Estadística para ingenieros'
+        6 Ed.
+        [8 ed]--> https://drive.google.com/file/d/0B9FlUGP8i39reUg0Qk9NWDlkX2c/view
         '''
         
         if not isinstance(data, np.ndarray):
@@ -178,12 +182,12 @@ class CLASIFIER(object):
         N = data.shape[0]
         
         if (N < 30):
-            f = st.t.interval(alpha, N-1, loc=np.mean(data), scale=st.sem(data))
-            CI = (f[1] - f[0])/2
+            
+            CI = st.t.ppf(1-(alpha/2), N-1) * np.std(data) / np.sqrt(N) # pp 247
         
         else:
             
-            CI = st.norm.ppf(1-(alpha/2)) * np.std(data) / np.sqrt(N) # O debería ser ¿N-1?
+            CI = st.norm.ppf(1-(alpha/2)) * np.std(data) / np.sqrt(N) # pp 244
         
         return CI
     #====================================================
@@ -529,7 +533,11 @@ class MEASURES(dict):
     def calculate_confidence_interval(self, data, alpha=0.05):
         '''
         REFERENCIA: https://rpubs.com/acatania/396921
+                    https://stackoverrun.com/es/q/5277580
         
+        Walpole, Myers, Myesr, 'Probabilidad y Estadística para ingenieros'
+        6 Ed.
+        [8 ed]--> https://drive.google.com/file/d/0B9FlUGP8i39reUg0Qk9NWDlkX2c/view
         '''
         
         if not isinstance(data, np.ndarray):
@@ -538,12 +546,15 @@ class MEASURES(dict):
         N = data.shape[0]
         
         if (N < 30):
-            f = st.t.interval(alpha, N-1, loc=np.mean(data), scale=st.sem(data))
-            CI = (f[1] - f[0])/2
+            
+            CI = st.t.ppf(1-(alpha/2), N-1) * np.std(data) / np.sqrt(N) # pp 247
         
         else:
             
-            CI = st.norm.ppf(1-(alpha/2)) * np.std(data) / np.sqrt(N) # O debería ser ¿N-1?
+            CI = st.norm.ppf(1-(alpha/2)) * np.std(data) / np.sqrt(N) # pp 244
+        
+        if np.isnan(CI):
+            CI = 0.0
         
         return CI
     #====================================================
@@ -982,6 +993,9 @@ class MULTIPLE_RUNS(object):
         else:
             
             CI = st.norm.ppf(1-(alpha/2)) * np.std(data) / np.sqrt(N) # O debería ser ¿N-1?
+        
+        if np.isnan(CI):
+            CI = 0.0
         
         return CI
     #====================================================

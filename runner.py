@@ -259,7 +259,7 @@ os.system('7z a -t7z -mx=9 {}/c++.7z c++/configs/ c++/fitness/ c++/GA/'.format(r
 #--------------------------------------------
 # GUARDO UNA COPIA DE runner_settings.yaml
 #--------------------------------------------
-os.system('cp runner_settings.yaml {}'.format(root_folder))
+os.system('cp {} {}'.format(args['experiment_settings'], root_folder))
 
 
 #--------------------------------------------
