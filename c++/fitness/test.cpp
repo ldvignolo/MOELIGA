@@ -457,6 +457,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
          output = TrainTestClassifier(TRNdataTMP, TSTdataTMP, trnLabels, clasificadores[i], clasif_configs[i], optimizador, optim_configs, true);
                    
          double elapsed = toc2(); 
+         
          double uar = fUAR(tstLabels,output);         
          arma::mat mc = MC(tstLabels,output);  
          string x_str;

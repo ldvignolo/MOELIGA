@@ -16,7 +16,7 @@
 // #include <mlpack/methods/decision_stump/decision_stump.hpp>
 // #include <mlpack/core/data/one_hot_encoding.hpp>
 
-
+#include <mlpack/methods/ann/activation_functions/softsign_function.hpp>
 
 using namespace std;
 using namespace mlpack;
@@ -285,6 +285,7 @@ arma::Row<size_t> TrainTestClassifier(arma::mat trn_data, arma::mat tst_data, ar
     {
         if (imprimir) cout << offset << "\"SVM\":" << endl;   
         
+        /*
         double par1, par2, par5, par7;
         int par3, par4; 
         bool par6;
@@ -296,20 +297,32 @@ arma::Row<size_t> TrainTestClassifier(arma::mat trn_data, arma::mat tst_data, ar
         geek >> par6;              
         geek >> par7;              
         
-        // mlpack::svm::LinearSVM<> method( trn_data, trn_labels, numClasses, par1, par2, true);          
-       
         mlpack::svm::LinearSVM<> method(trn_data,                        //  Independent variables  
                                         trn_labels,                      //  Dependent variables                                             
                                         numClasses,                      //  number of classes  
                                         trn_data.n_rows,                 //  number of features
                                         par1,                            //  lambda:           L2-regularization constant.
                                         par2,                            //  delta:            Margin of difference between correct class and other classes.
-                                        ens::ParallelSGD<>(par3,         // (int) maxIterations:    pSGD: Maximum number of iterations allowed (0 means no limit). (100/0)
-                                                           par4,         // (int) threadShareSize:  pSGD: Number of datapoints to be processed in one iteration by each thread. (10)
-                                                           par5,         // (dbl) tolerance:        pSGD: Maximum absolute tolerance to terminate the algorithm. (1e-5)
-                                                           par6,         // (boo) shuffle:          pSGD: If true, the function order is shuffled; otherwise, each function is visited in linear order. (true)
-                                                           par7));       // (dbl) decayPolicy:      pSGD: The step size update policy to use. (5)
+                                        ens::ParallelSGD<>(par3,         //  (int) maxIterations:    pSGD: Maximum number of iterations allowed (0 means no limit). (100/0)
+                                                           par4,         //  (int) threadShareSize:  pSGD: Number of datapoints to be processed in one iteration by each thread. (10)
+                                                           par5,         //  (dbl) tolerance:        pSGD: Maximum absolute tolerance to terminate the algorithm. (1e-5)
+                                                           par6,         //  (boo) shuffle:          pSGD: If true, the function order is shuffled; otherwise, each function is visited in linear order. (true)
+                                                           par7));       //  (dbl) decayPolicy:      pSGD: The step size update policy to use. (5)
+        */
         
+        double par1, par2;
+        bool par3;
+        geek >> par1; 
+        geek >> par2; 
+        geek >> par3;              
+
+        mlpack::svm::LinearSVM<> method(trn_data,                        //  Independent variables  
+                                        trn_labels,                      //  Dependent variables                                             
+                                        numClasses,                      //  number of classes  
+                                        par1,                            //  number of features
+                                        par2,                            //  (double) lambda:  L2-regularization constant.
+                                        par3);                           //  (double) delta:   Margin of difference between correct class and other classes.
+                                                                         //  (bool) shuffle:     
         method.Classify(tst_data, output);  
         
     }
@@ -384,18 +397,19 @@ arma::Row<size_t> TrainTestClassifier(arma::mat trn_data, arma::mat tst_data, ar
         if (par2==-1) par2 = (trn_data.n_rows + numClasses); 
     
         // Initialize the network.
-        FFN<> model;
+        FFN<NegativeLogLikelihood<>> model;
         model.Add<Linear<> >(trn_data.n_rows, par1);
         model.Add<SigmoidLayer<> >();
         model.Add<Linear<> >(par1, par2);
         model.Add<SigmoidLayer<> >();
         model.Add<Linear<> >(par2, numClasses);
-        model.Add<LogSoftMax<> >();             
+        model.Add<LogSoftMax<> >();
+        // model.Add<ReLULayer<> >();             
 
         // Train the model.
         arma::mat trn_labels_Mat, pred_one_hot;
         trn_labels_Mat = arma::conv_to<arma::mat>::from(trn_labels+1);                                
-        EntrenarModelo<FFN<>> (model, trn_data, trn_labels_Mat, optimizador, optim_configs);             
+        EntrenarModelo<FFN<NegativeLogLikelihood<>>> (model, trn_data, trn_labels_Mat, optimizador, optim_configs);             
         model.Predict(tst_data, pred_one_hot);                          
         output.zeros(pred_one_hot.n_cols);
         // Find index of max prediction for each data point and store in "prediction"
@@ -420,16 +434,17 @@ arma::Row<size_t> TrainTestClassifier(arma::mat trn_data, arma::mat tst_data, ar
         kmeans.Cluster(trn_data, par1, centroids);                     // centres: The centres calculated using k-means of data (arma::mat).         
         
         // Initialize the network.
-        FFN<> model;
+        FFN<NegativeLogLikelihood<>> model;
         model.Add<RBF<> >(trn_data.n_rows, par1, centroids, par2);     // inSize: The number of input units (size_t).
                                                                        // outSize: The number of output units (size_t).                                                                            
         model.Add<Linear<> >(par1, numClasses);
-        model.Add<LogSoftMax<> >();             
+        model.Add<LogSoftMax<> >();
+        // model.Add<ReLULayer<> >();             
         
         // Train the model.
         arma::mat trn_labels_Mat, pred_one_hot;
         trn_labels_Mat = arma::conv_to<arma::mat>::from(trn_labels+1);         
-        EntrenarModelo<FFN<>> (model, trn_data, trn_labels_Mat, optimizador, optim_configs);             
+        EntrenarModelo<FFN<NegativeLogLikelihood<>>> (model, trn_data, trn_labels_Mat, optimizador, optim_configs);             
         model.Predict(tst_data, pred_one_hot);                          
         output.zeros(pred_one_hot.n_cols);
         // Find index of max prediction for each data point and store in "prediction"
@@ -444,3 +459,5 @@ arma::Row<size_t> TrainTestClassifier(arma::mat trn_data, arma::mat tst_data, ar
     return output;
         
 }
+
+
