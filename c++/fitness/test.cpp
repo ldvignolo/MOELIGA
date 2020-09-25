@@ -453,7 +453,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
          arma::Row<size_t> output;
          string offset = string(25, ' ');
          tic();
-           
+        
          output = TrainTestClassifier(TRNdataTMP, TSTdataTMP, trnLabels, clasificadores[i], clasif_configs[i], optimizador, optim_configs, true);
                    
          double elapsed = toc2(); 
@@ -465,7 +465,7 @@ void test(cromosoma crom, int lbits, int rank, float seed, short pobtype, double
          x_str =  offset + string(5, ' ') + "\"CONFUSION_MATRIX\": ";
          printMC(mc, x_str);
          cout <<  offset << string(5, ' ') << "\"UAR\": " << uar << ","<< endl;
-         cout <<  offset << string(5, ' ') << "\"ELAPSED_TIME\": " << elapsed << endl;
+         cout <<  offset << string(5, ' ') << "\"ELAPSED_TIME\": "  << elapsed << endl;
          cout <<  offset << "}"; 
          if (i==(clasificadores.size()-1))
              cout << endl; 
