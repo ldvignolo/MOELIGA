@@ -567,6 +567,9 @@ void AG::CalcularDistancias(poblacion &inPOB, bool operador_diversidad)
         inPOB.individuos[j].distancias.clear();
         inPOB.individuos[j].distancias.resize(inPOB.tampob);
         
+        int n = Verificar(&inPOB.individuos[j]);
+        (void) n;
+        
         inPOB.individuos[j].distancias[j]=0.0;
         for (i=0;i<j;i++)
         {    
@@ -1774,8 +1777,6 @@ cromosoma AG::mutacion(cromosoma crom, double pmutacion, int caso, int &NMutas)
 {
   cromosoma aux_crom;
   
-  
-  
   switch ( caso )
   {
       case 1 :   // de cromosoma
@@ -2240,10 +2241,11 @@ void AG::yaml_ImprimirGen(int gener, double maxfitness, double minfitness, doubl
       } 
       */
       results << "   NUMERO_DE_VECES_QUE_SE_ELIGE_CADA_FEATURE: [";
+      if (0==inPOB.lcrom) results << "]" << endl;       
       for (short i=0;i<inPOB.lcrom;i++) {      
            results << inPOB.histograma[i];
            if (i<(inPOB.lcrom-1)) results << ", "; else results << "]" << endl;
-      }        
+      } 
       results << endl;
       results << "   CANTIDAD_DE_MUTACIONES: " << inPOB.NMutas << endl;
       // results << "   DISTANCIA_MEDIA_POBLACIONAL: " << inPOB.mean_dist << endl; // redundante, ya esta el vector
