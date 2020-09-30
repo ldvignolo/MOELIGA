@@ -273,11 +273,8 @@ int main(int argc, char** argv)
         
         string line;           
         // considero que puede haber varios cromosomas en un mismo archivo, uno por linea, entonces hago el test para cada linea
-        while ( getline( features, line )) {
-            
-             if (icrom>1) cout << "," << endl;
-            
-             cout << " {\"INDIVIDUO\": " << icrom << "," << endl;
+        while ( getline( features, line )) 
+        {            
              
              feats.resize(0);
              stringstream str(line);
@@ -285,19 +282,25 @@ int main(int argc, char** argv)
              while (str >> aux_int) {
                  aux_int = aux_int-1;
                  feats.push_back(aux_int);                 
-             }             
+             } 
              
-             cout << "  \"NUMERO_COEFICIENTES_SELECCIONADOS\": " << feats.size() << "," << endl;
-             cout << "  \"FEATURES\": " << "[";
-             
-             for (unsigned j=0;j<feats.size();j++) 
-                 if (j < feats.size()-1) cout << feats[j]+1 << ", "; else cout << feats[j]+1 << "],"<< endl;
-             
-             doTest();                  
-             icrom++;
-             
-             cout << " }";
-             
+             if (feats.size()>0) {
+                 
+                 if (icrom>1) cout << "," << endl;
+            
+                 cout << " {\"INDIVIDUO\": " << icrom << "," << endl;
+
+                 cout << "  \"NUMERO_COEFICIENTES_SELECCIONADOS\": " << feats.size() << "," << endl;             
+                 cout << "  \"FEATURES\": " << "[";             
+                 for (unsigned j=0;j<feats.size();j++) 
+                     if (j < feats.size()-1) cout << feats[j]+1 << ", "; else cout << feats[j]+1 << "],"<< endl;
+                 
+                 doTest();                  
+                 icrom++;
+                 
+                 cout << " }";
+             }    
+                 
        }
        features.close();   
        cout << endl << "]" << endl;

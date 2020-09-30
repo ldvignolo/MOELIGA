@@ -1936,15 +1936,18 @@ unsigned AG::Verificar(cromosoma *JohnDoe)
 void AG::ImprimirCromoForTest(individuo johndoe, bool append)
 {
     // guardo los cromosoma en archivo separado para correr los tests
+    if (johndoe.crom.size()>0) {
     
-    ofstream best_crom;
-    if (!append) best_crom.open(crom_file.c_str(), ofstream::out | ofstream::trunc);
-    else best_crom.open(crom_file.c_str(), ofstream::out | ofstream::app); 
+        ofstream best_crom;
+        if (!append) best_crom.open(crom_file.c_str(), ofstream::out | ofstream::trunc);
+        else best_crom.open(crom_file.c_str(), ofstream::out | ofstream::app); 
+        
+        for (size_t i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) best_crom << i+1 << " ";
+        best_crom << endl;     
+        
+        best_crom.close();     
     
-    for (size_t i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) best_crom << i+1 << " ";
-    best_crom << endl;     
-    
-    best_crom.close();     
+    }
     
 }
 
@@ -2026,27 +2029,30 @@ void AG::ImprimirFrente(poblacion &inPOB, int generac, double best_fit, bool onl
 //===================================================================
 void AG::ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront)
 {
-     indiv++; 
-     
-     if (!results.is_open()) results.open(res_file.c_str(), ofstream::out | ofstream::app);
-     
-     results << endl;
-     results << "::> Generacion: " << generac << endl;
-     results << "::> Individuo: " << indiv << endl;
-     results << "::> Coeficientes Seleccionados: " <<  endl;
-     for (size_t i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) results << i+1 << " ";        
-     results << endl;
-     results << "::> Numero Coeficientes Seleccionados: " << johndoe.nF << endl;
-     results << "::> Fitness: " << johndoe.Fitness << endl;
-     results << "::> Shared Fitness: " << johndoe.sFitness << endl;
-     results << "::> Rank: " << johndoe.rango << endl;
-     for (int i=0;i<(nObjctvs);i++)
-         results << "::> Objetivo " << i <<": "  << johndoe.aptitud[i] << endl;
+     if (johndoe.crom.size()>0) {
+         
+        indiv++; 
+        
+        if (!results.is_open()) results.open(res_file.c_str(), ofstream::out | ofstream::app);
+        
+        results << endl;
+        results << "::> Generacion: " << generac << endl;
+        results << "::> Individuo: " << indiv << endl;
+        results << "::> Coeficientes Seleccionados: " <<  endl;
+        for (size_t i=0;i<johndoe.crom.size();i++) if (johndoe.crom[i]) results << i+1 << " ";        
+        results << endl;
+        results << "::> Numero Coeficientes Seleccionados: " << johndoe.nF << endl;
+        results << "::> Fitness: " << johndoe.Fitness << endl;
+        results << "::> Shared Fitness: " << johndoe.sFitness << endl;
+        results << "::> Rank: " << johndoe.rango << endl;
+        for (int i=0;i<(nObjctvs);i++)
+            results << "::> Objetivo " << i <<": "  << johndoe.aptitud[i] << endl;
 
-     results << "::> Medida para elegir el mejor R1: " << johndoe.R1 << endl;
-     results << "::> Medida para elegir el mejor R2: " << johndoe.R2 << endl;
-     
-     results.close();
+        results << "::> Medida para elegir el mejor R1: " << johndoe.R1 << endl;
+        results << "::> Medida para elegir el mejor R2: " << johndoe.R2 << endl;
+        
+        results.close();
+     }
      
      return;
 }
@@ -2060,45 +2066,48 @@ void AG::ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront)
 //===================================================================
 void AG::yaml_ImprimirCromo(individuo johndoe, int generac, int indiv, bool newfront)
 {   
-     indiv++;
+     if (johndoe.crom.size()>0) 
+     {
+        indiv++;
 
-     if (!results.is_open()) results.open(yaml_file.c_str(), ofstream::out | ofstream::app);
+        if (!results.is_open()) results.open(yaml_file.c_str(), ofstream::out | ofstream::app);
 
-     if (newfront) 
-     {    
-         results << "  #===================================" << endl;
-         results << "  FRENTE_DE_PARETO:" << endl << endl;
-     }        
-     results << "  #---------------" << endl;
-     results << "   - INDIVIDUO: "  << indiv << endl;
-     results << "     GENERACION: " << generac << endl;
-     results << "     NUMERO_COEFICIENTES_SELECCIONADOS: " << johndoe.nF << endl;
-     /*
-     results << "     COEFICIENTES_SELECCIONADOS: [";
-     bool fflag = false;
-     for (int i=0;i<johndoe.crom.size();i++) 
-         if (johndoe.crom[i]) {                
-             if (fflag) results << ", ";                
-             results << i+1;
-             fflag = true;                                 
-         }               
-     results << "]" << endl;
-     */
-     results << "     FITNESS: " << johndoe.Fitness << endl;
-     results << "     SHARED_FITNESS: " << johndoe.sFitness << endl;
-     results << "     RANK: " << johndoe.rango << endl;        
-     results << "     RANK_COUNT: " << johndoe.nr << endl;
-     results << "     AGE: " << johndoe.edad << endl;
-     results << "     MEAN_DISTANCE: " << johndoe.mean_dist << endl;
-     results << "     NICHE_COUNT: " << johndoe.ncount << endl;        
-     results << "     MEDIDA_PARA_ELEGIR_EL_MEJOR_R1: " << johndoe.R1 << endl;
-     results << "     MEDIDA_PARA_ELEGIR_EL_MEJOR_R2: " << johndoe.R2 << endl;
-     results << "     OBJETIVOS: [";        
-     for (int i=0;i<nObjctvs;i++) {
-         results << johndoe.aptitud[i];
-         if (i<(nObjctvs-1)) results << ", "; else results << "]" << endl << endl;
-     }            
-     results.close();
+        if (newfront) 
+        {    
+            results << "  #===================================" << endl;
+            results << "  FRENTE_DE_PARETO:" << endl << endl;
+        }        
+        results << "  #---------------" << endl;
+        results << "   - INDIVIDUO: "  << indiv << endl;
+        results << "     GENERACION: " << generac << endl;
+        results << "     NUMERO_COEFICIENTES_SELECCIONADOS: " << johndoe.nF << endl;
+        /*
+        results << "     COEFICIENTES_SELECCIONADOS: [";
+        bool fflag = false;
+        for (int i=0;i<johndoe.crom.size();i++) 
+            if (johndoe.crom[i]) {                
+                if (fflag) results << ", ";                
+                results << i+1;
+                fflag = true;                                 
+            }               
+        results << "]" << endl;
+        */
+        results << "     FITNESS: " << johndoe.Fitness << endl;
+        results << "     SHARED_FITNESS: " << johndoe.sFitness << endl;
+        results << "     RANK: " << johndoe.rango << endl;        
+        results << "     RANK_COUNT: " << johndoe.nr << endl;
+        results << "     AGE: " << johndoe.edad << endl;
+        results << "     MEAN_DISTANCE: " << johndoe.mean_dist << endl;
+        results << "     NICHE_COUNT: " << johndoe.ncount << endl;        
+        results << "     MEDIDA_PARA_ELEGIR_EL_MEJOR_R1: " << johndoe.R1 << endl;
+        results << "     MEDIDA_PARA_ELEGIR_EL_MEJOR_R2: " << johndoe.R2 << endl;
+        results << "     OBJETIVOS: [";        
+        for (int i=0;i<nObjctvs;i++) {
+            results << johndoe.aptitud[i];
+            if (i<(nObjctvs-1)) results << ", "; else results << "]" << endl << endl;
+        }            
+        results.close();
+     }
      
      return;
 }
