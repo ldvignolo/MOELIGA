@@ -2,7 +2,7 @@
  PARAMETERS:
   #TasaActivacionEscalonada: [True, False]  
   NSubPoblaciones: [0,3]
-  SubPob_Replace_Type: ['reemplazo_padre']
+  SubPob_Replace_Type: ['reemplazo_padre','reemplazo_seleccion']
   Obj2Sigmod: [True, False]
   SigmLambda: [0.1, 0.5, 1.5, 5.0, 15.0]
   #NObjetivos: [2,3]
