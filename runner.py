@@ -138,9 +138,9 @@ for (folder,PARAMETERS) in EXPERIMENTOS:
     
     start_initialization = tic()
     
-    log_line = 'Starting: {}\n'.format(str(start_initialization))
+    log_line = 'Starting: {}\n'.format(str(start_initialization))    
     log_line += '\n\n============================\n\n\n'
-    print(log_line)
+    # print(log_line)
     LOG += log_line
     
     
@@ -195,8 +195,9 @@ for (folder,PARAMETERS) in EXPERIMENTOS:
         # START LOGGING
         start_time = tic()
         log_line = 'Repetition {}/{} [{}/{}]\n'.format(str(i), str(args['repetitions']), n, N)
-        log_line += 'Starting: {}\n'.format(str(start_time))
         print(log_line)
+        log_line += 'Starting: {}\n'.format(str(start_time))
+        # print(log_line)
         LOG += log_line
         
         #·····································
@@ -215,7 +216,7 @@ for (folder,PARAMETERS) in EXPERIMENTOS:
         stop_time = tic()
         log_line = 'Ending: {}\n'.format(str(stop_time))
         #log_line += '\n----------------------------\n\n'
-        print(log_line)
+        #print(log_line)
         LOG += log_line
         
         
@@ -237,7 +238,7 @@ for (folder,PARAMETERS) in EXPERIMENTOS:
     end_time = tic()
     
     log_line = 'Ending: {}\n\n'.format(str(end_time))
-    print(log_line)
+    #print(log_line)
     LOG += log_line
     
 
