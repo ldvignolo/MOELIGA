@@ -61,13 +61,9 @@ experiments = list(itertools.product(*L))
 
 
 #======================================
-# STARTING EXPERIMENT SEQUENCE
+# BUILDING EXPERIMENT SEQUENCE
 #======================================
-log_line = 'Starting experiment sequence...\n\n'
-print(log_line)
-LOG += log_line
-
-EXPERIMENTOS_REALIZADOS = []
+EXPERIMENTOS = []
 
 for experiment in experiments:
     
@@ -80,7 +76,7 @@ for experiment in experiments:
     if not os.path.exists(folder):
         os.makedirs(folder)
         
-    PARAMETERS = dict()
+    parameters = dict()
     
     # FILTRO LO QUE NO SE MODIFICA POR FALSE
     USAR = dict()
@@ -105,7 +101,7 @@ for experiment in experiments:
         if USAR[k]:
             
             folder += '{}__{}/'.format(k,v)
-            PARAMETERS[k] = v
+            parameters[k] = v
             
             folder = folder.replace('True', 'true')
             folder = folder.replace('False', 'false')
@@ -117,119 +113,132 @@ for experiment in experiments:
     #########################################################
     # EVITO REPETIR EXPERIMENTOS POR CARPETAS REPETIDAS!!
     #########################################################
-    if folder not in EXPERIMENTOS_REALIZADOS:
+    if folder not in EXPERIMENTOS:
+        EXPERIMENTOS.append([folder, parameters])
         
-        EXPERIMENTOS_REALIZADOS.append(folder)
-        
-        
-        #-------------------------------------------
-        log_line = '\n########################################################\n\n'
-        log_line += 'Processing experiment: {}\n'.format(folder)
-        print(log_line)
-        LOG += log_line
-        
-        start_initialization = tic()
-        
-        log_line = 'Starting: {}\n'.format(str(start_initialization))
-        log_line += '\n\n============================\n\n\n'
-        print(log_line)
-        LOG += log_line
-        
-        
-        #-----------------------------------------------------
-        # LEO ARCHIVO DE SETTINGS DE ELIGA
-        #-----------------------------------------------------
-        with open(args['eliga_settings'], 'r') as fp:
-            SETTINGS = fp.read()
-        
-        #-----------------------------------------------------
-        # MODIFICO SEGUN LOS PARAMETROS
-        #-----------------------------------------------------
-        for k,v in PARAMETERS.items():
-            SETTINGS = re.sub('\n{}=.*\n'.format(k),
+
+# NUMERO TOTAL DE EXPERIMENTOS
+N = len(EXPERIMENTOS) * int(args['repetitions'])
+    
+###########################################
+# COMIENZO LA SECUQNCIA DE EXPERIMENTOS
+###########################################
+log_line = 'Starting experiment sequence...\n\n'
+print(log_line)
+LOG += log_line
+
+n = 0
+for (folder,PARAMETERS) in EXPERIMENTOS:
+    
+    #-------------------------------------------
+    log_line = '\n########################################################\n\n'
+    log_line += 'Processing experiment: {}\n'.format(folder)
+    print(log_line)
+    LOG += log_line
+    
+    start_initialization = tic()
+    
+    log_line = 'Starting: {}\n'.format(str(start_initialization))
+    log_line += '\n\n============================\n\n\n'
+    print(log_line)
+    LOG += log_line
+    
+    
+    #-----------------------------------------------------
+    # LEO ARCHIVO DE SETTINGS DE ELIGA
+    #-----------------------------------------------------
+    with open(args['eliga_settings'], 'r') as fp:
+        SETTINGS = fp.read()
+    
+    #-----------------------------------------------------
+    # MODIFICO SEGUN LOS PARAMETROS
+    #-----------------------------------------------------
+    for k,v in PARAMETERS.items():
+        SETTINGS = re.sub('\n{}=.*\n'.format(k),
                             '\n{}="{}"\n'.format(k,v) if isinstance(v, str) else '\n{}={}\n'.format(k,v),
                             SETTINGS)
-        
-        output_folder = folder.replace('True',
+    
+    output_folder = folder.replace('True',
                                     'true')
-        
-        output_folder = output_folder.replace('False',
+    
+    output_folder = output_folder.replace('False',
                                             'false')
-        
-        SETTINGS = re.sub('\noutdir=.*\n',
+    
+    SETTINGS = re.sub('\noutdir=.*\n',
                         '\noutdir="{}"\n'.format(output_folder),
                         SETTINGS)
+    
+    #-----------------------------------------------------
+    # GUARDO ARCHIVO DE SETTINGS DE ELIGA
+    #-----------------------------------------------------
+    SETTINGS = ''.join(SETTINGS)
+    
+    filename_settings = os.path.split(args['eliga_settings'])[-1]
+    
+    with open(os.path.join(output_folder, filename_settings), 'w') as fp:
+        fp.write(SETTINGS)
+    
+    #-----------------------------------------------------    
+    
+    
+    #------------------------------------
+    # CORRER REPLICAS
+    #-------------------
+    for i in range(1,int(args['repetitions'])+1):
         
+        n += 1  # EXPERIMENTO/TOTAL EXPERIMENTOS
         
-        #-----------------------------------------------------
-        # GUARDO ARCHIVO DE SETTINGS DE ELIGA
-        #-----------------------------------------------------
-        SETTINGS = ''.join(SETTINGS)
+        #----------------------
+        # CORRER EXPERIMENTO
+        #----------------------
         
-        filename_settings = os.path.split(args['eliga_settings'])[-1]
-        
-        with open(os.path.join(output_folder, filename_settings), 'w') as fp:
-            fp.write(SETTINGS)
-        
-        #-----------------------------------------------------    
-        
-        
-        #------------------------------------
-        # CORRER REPLICAS
-        #-------------------
-        for i in range(1,int(args['repetitions'])+1):
-            
-            #----------------------
-            # CORRER EXPERIMENTO
-            #----------------------
-            
-            # START LOGGING
-            start_time = tic()
-            log_line = 'Repetition {}/{}\n'.format(str(i), str(args['repetitions']))
-            log_line += 'Starting: {}\n'.format(str(start_time))
-            print(log_line)
-            LOG += log_line
-            
-            #·····································
-            # ALGORITHM
-            #·············
-            _,eliga_settings = os.path.split(args['eliga_settings'])
-            current_path = os.path.join(output_folder, eliga_settings)
-            
-            if RUN_ALGORITHM:
-                os.system('./bin/agp cfg {}'.format(current_path))
-            
-            
-            #·····································
-            
-            # STOP LOGGING
-            stop_time = tic()
-            log_line = 'Ending: {}\n'.format(str(stop_time))
-            #log_line += '\n----------------------------\n\n'
-            print(log_line)
-            LOG += log_line
-            
-            
-            log_line = 'Elapsed time: {} sec\n'.format(str(stop_time-start_time))
-            log_line += '\n----------------------------\n\n'
-            print(log_line)
-            LOG += log_line
-            
-            
-            # SAVING SETTINGS FILE
-            filename = os.path.split(args['eliga_settings'])[-1]
-            with open(folder + filename, 'w') as fp:
-                fp.write(SETTINGS)
-            
-            
-        #------------------------------------
-        
-        
-        end_time = tic()
-        
-        log_line = 'Ending: {}\n\n'.format(str(end_time))
+        # START LOGGING
+        start_time = tic()
+        log_line = 'Repetition {}/{} [{}/{}]\n'.format(str(i), str(args['repetitions']), n, N)
+        log_line += 'Starting: {}\n'.format(str(start_time))
         print(log_line)
         LOG += log_line
+        
+        #·····································
+        # ALGORITHM
+        #·············
+        _,eliga_settings = os.path.split(args['eliga_settings'])
+        current_path = os.path.join(output_folder, eliga_settings)
+        
+        if RUN_ALGORITHM:
+            os.system('./bin/agp cfg {}'.format(current_path))
+        
+        
+        #·····································
+        
+        # STOP LOGGING
+        stop_time = tic()
+        log_line = 'Ending: {}\n'.format(str(stop_time))
+        #log_line += '\n----------------------------\n\n'
+        print(log_line)
+        LOG += log_line
+        
+        
+        log_line = 'Elapsed time: {} sec\n'.format(str(stop_time-start_time))
+        log_line += '\n----------------------------\n\n'
+        print(log_line)
+        LOG += log_line
+        
+        
+        # SAVING SETTINGS FILE
+        filename = os.path.split(args['eliga_settings'])[-1]
+        with open(folder + filename, 'w') as fp:
+            fp.write(SETTINGS)
+        
+        
+    #------------------------------------
+    
+    
+    end_time = tic()
+    
+    log_line = 'Ending: {}\n\n'.format(str(end_time))
+    print(log_line)
+    LOG += log_line
     
 
 ending_run_time = timeit.time.strftime("%Y%m%d-%H%M%S")
@@ -254,7 +263,7 @@ with open('{}/log_{}.txt'.format(root_folder,starting_run_time), 'w') as fp:
 #--------------------------
 # GUARDO UNA COPIA DE C++
 #--------------------------
-os.system('7z a -t7z -mx=9 {}/c++.7z c++/configs/ c++/fitness/ c++/GA/'.format(root_folder))
+os.system('7z a -t7z -mx=9 {}c++.7z c++/configs/ c++/fitness/ c++/GA/'.format(root_folder))
 
 #--------------------------------------------
 # GUARDO UNA COPIA DE runner_settings.yaml

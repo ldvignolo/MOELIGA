@@ -4,6 +4,8 @@ import glob
 import numpy as np
 import pandas as pd
 import yaml
+
+# pip install XlsxWriter
 import xlsxwriter # no es necesario importarlo, pero lo hago para que si no esta salte el error al inicio y no despues
 
 

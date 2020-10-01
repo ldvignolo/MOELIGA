@@ -18,6 +18,132 @@ import pandas as pd
 import io
 
 
+#===============================================
+def check_type(values):
+    '''
+    '''
+    
+    if isinstance(values, np.ndarray):
+        values = values.tolist()
+    
+    elif isinstance(values, np.float64):
+        values = float(values)
+    
+    elif isinstance(values, np.int64):
+        values = int(values)
+    
+    return values
+#===============================================
+
+
+#====================================================
+def calculate_confidence_interval(data, alpha=0.05):
+    '''
+    REFERENCIA: https://rpubs.com/acatania/396921
+                https://stackoverrun.com/es/q/5277580
+    
+    Walpole, Myers, Myesr, 'Probabilidad y Estadística para ingenieros'
+    6 Ed.
+    [8 ed]--> https://drive.google.com/file/d/0B9FlUGP8i39reUg0Qk9NWDlkX2c/view
+    '''
+    
+    if not isinstance(data, np.ndarray):
+        data = np.array(data)
+    
+    N = data.shape[0]
+    
+    if (N < 30):
+        
+        CI = st.t.ppf(1-(alpha/2), N-1) * np.std(data) / np.sqrt(N) # pp 247
+    
+    else:
+        
+        CI = st.norm.ppf(1-(alpha/2)) * np.std(data) / np.sqrt(N) # pp 244
+    
+    if np.isnan(CI):
+        CI = 0.0
+    
+    return CI
+#====================================================
+
+
+#====================================================
+def statistics(values, statistic, axis=0, alpha=0.05):
+    '''
+    '''
+    
+    if (values != None):
+        
+        if isinstance(values, list):
+            values = np.array(values)
+        
+        if isinstance(values, np.ndarray) and (values.ndim == 1):
+            axis = 0
+        
+        if isinstance(values, np.ndarray):
+            
+            #---------------------------------------
+            if (statistic == 'mean'):
+                values = np.mean(values, axis=axis)
+            
+            elif (statistic == 'median'):
+                values = np.median(values, axis=axis)
+            
+            elif (statistic == 'std'):
+                values = np.std(values, axis=axis)
+            
+            elif (statistic == 'mad'):
+                values = mad(values, axis=axis)
+                
+                if isinstance(values,tuple):
+                    values = values[0].flatten()
+            
+            elif (statistic == 'max'):
+                values = np.max(values, axis=axis)
+            
+            elif (statistic == 'min'):
+                values = np.min(values, axis=axis)
+            
+            elif (statistic == 'mode'):
+                pass
+            
+            elif (statistic == 'sum'):
+                values = np.sum(values, axis=axis)
+            
+            elif (statistic == 'confidence'):
+                values = calculate_confidence_interval(values, alpha=alpha)
+        #---------------------------------------
+        
+        values = check_type(values)
+    
+    return values
+#====================================================
+
+
+#====================================================
+def apply_statistic(values, statistic=None, squeezy_criterium='mean'):
+    '''
+    '''
+    
+    if (values != None):
+        
+        # COMPRIME LOS VALORES DE LA GENERACION
+        values = statistics(values,
+                            statistic=squeezy_criterium,
+                            axis=1)
+        
+        # CALCULA ESTADISTICA
+        values = statistics(values,
+                            statistic=statistic,
+                            axis=0)  # axis=1
+        
+    
+    return values
+#====================================================
+
+
+
+
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 def procesar_replicas(root_path, lib_path):
@@ -50,9 +176,9 @@ def procesar_replicas(root_path, lib_path):
     #-----------------------------------
     # PROCESO REPLICAS
     #-----------------------------------
-    for path in paths:
+    for n,path in enumerate(paths):
         
-        print('\nProcesando {}...'.format(path))
+        print('\n[{}/{}] Procesando {}...'.format(n+1, len(paths), path))
         
         mr = MULTIPLE_RUNS(path, lib_path=lib_path)
         
@@ -88,7 +214,7 @@ class CLASIFIER(object):
         new_values = []
         
         for value in values:
-            new_values.append(self._apply_statistic(value, statistic=criterium, axis=axis))
+            new_values.append(statistics(value, statistic=criterium, axis=axis))
         
         return new_values
     
@@ -100,98 +226,12 @@ class CLASIFIER(object):
                                 criterium=squeezy_criterium,
                                 axis=axis)
         
-        values = self._apply_statistic(values,
-                                       statistic=statistic,
-                                       axis=0)
+        values = statistics(values,
+                           statistic=statistic,
+                           axis=0)
         
         return values
-    
-    
-    
-    #===============================================
-    def _apply_statistic(self, values, statistic=None, axis=0, alpha=0):
-        '''
-        '''
-        
-        if (values != None):
-            
-            #---------------------------------------
-            if (statistic == 'mean'):
-                values = np.mean(values, axis=axis)
-            
-            elif (statistic == 'median'):
-                values = np.median(values, axis=axis)
-            
-            elif (statistic == 'std'):
-                values = np.std(values, axis=axis)
-            
-            elif (statistic == 'mad'):
-                values = mad(values, axis=axis)
-            
-            elif (statistic == 'max'):
-                values = np.max(values, axis=axis)
-            
-            elif (statistic == 'min'):
-                values = np.min(values, axis=axis)
-            
-            elif (statistic == 'mode'):
-                pass
-            
-            elif (statistic == 'sum'):
-                values = np.sum(values, axis=axis)
-            
-            elif (statistic == 'confidence'):
-                values = self.calculate_confidence_interval(values, alpha=alpha)
-            #---------------------------------------
-            
-            values = self.__check_type(values)
-        
-        return values
-    
-    
-    #===============================================
-    def __check_type(self, values):
-        '''
-        '''
-        
-        if isinstance(values, np.ndarray):
-            values = values.tolist()
-        
-        elif isinstance(values, np.float64):
-            values = float(values)
-        
-        elif isinstance(values, np.int64):
-            values = int(values)
-        
-        return values
-    
-    #====================================================
-    def calculate_confidence_interval(self, data, alpha=0.05):
-        '''
-        REFERENCIA: https://rpubs.com/acatania/396921
-                    https://stackoverrun.com/es/q/5277580
-        
-        Walpole, Myers, Myesr, 'Probabilidad y Estadística para ingenieros'
-        6 Ed.
-        [8 ed]--> https://drive.google.com/file/d/0B9FlUGP8i39reUg0Qk9NWDlkX2c/view
-        '''
-        
-        if not isinstance(data, np.ndarray):
-            data = np.array(data)
-        
-        N = data.shape[0]
-        
-        if (N < 30):
-            
-            CI = st.t.ppf(1-(alpha/2), N-1) * np.std(data) / np.sqrt(N) # pp 247
-        
-        else:
-            
-            CI = st.norm.ppf(1-(alpha/2)) * np.std(data) / np.sqrt(N) # pp 244
-        
-        return CI
-    #====================================================
-    
+
     
     #===============================================
     def update_metric(self, metric_name, values):
@@ -203,141 +243,6 @@ class CLASIFIER(object):
         
         self.metrics[metric_name].append(values)
     
-    
-    #===============================================
-    def get_tp(self, statistic=None, squeezy_criterium='sum'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self.metrics.get(key)
-        
-        values = self.get_statistic(values=values,
-                                    statistic=statistic,
-                                    squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_tn(self, statistic=None, squeezy_criterium='sum'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self.metrics.get(key)
-        
-        values = self.get_statistic(values=values,
-                                    statistic=statistic,
-                                    squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_fp(self, statistic=None, squeezy_criterium='sum'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self.metrics.get(key)
-        
-        values = self.get_statistic(values=values,
-                                    statistic=statistic,
-                                    squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_fn(self, statistic=None, squeezy_criterium='sum'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self.metrics.get(key)
-        
-        values = self.get_statistic(values=values,
-                                    statistic=statistic,
-                                    squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_confussion_matrix(self, statistic=None, squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self.metrics.get(key)
-        
-        values = self.get_statistic(values=values,
-                                    statistic=statistic,
-                                    squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_uar(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self.metrics.get(key)
-        
-        values = self.get_statistic(values=values,
-                                    statistic=statistic,
-                                    squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_f1(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self.metrics.get(key)
-        
-        values = self.get_statistic(values=values,
-                                    statistic=statistic,
-                                    squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_elapsed_time(self, statistic='mean', squeezy_criterium=None):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self.metrics.get(key)
-        
-        values = self.get_statistic(values=values,
-                                    statistic=statistic,
-                                    squeezy_criterium=squeezy_criterium)
-        
-        return values
     
     #===============================================
     def get_metric(self, metric, statistic='mean', squeezy_criterium=None):
@@ -447,361 +352,15 @@ class MEASURES(dict):
     
     
     #===============================================
-    def __check_type(self, values):
-        '''
-        '''
-        
-        if isinstance(values, np.ndarray):
-            values = values.tolist()
-        
-        elif isinstance(values, np.float64):
-            values = float(values)
-        
-        elif isinstance(values, np.int64):
-            values = int(values)
-        
-        return values
-    
-    #===============================================
-    def _statistics(self, values, statistic, axis=0, alpha=0.05):
-        '''
-        '''
-        
-        if (values != None):
-            
-            if isinstance(values, list):
-                values = np.array(values)
-            
-            if (values.ndim == 1):
-                axis = 0
-            
-            #---------------------------------------
-            if (statistic == 'mean'):
-                values = np.mean(values, axis=axis)
-            
-            elif (statistic == 'median'):
-                values = np.median(values, axis=axis)
-            
-            elif (statistic == 'std'):
-                values = np.std(values, axis=axis)
-            
-            elif (statistic == 'mad'):
-                values = mad(values, axis=axis)
-            
-            elif (statistic == 'max'):
-                values = np.max(values, axis=axis)
-            
-            elif (statistic == 'min'):
-                values = np.min(values, axis=axis)
-            
-            elif (statistic == 'mode'):
-                pass
-            
-            elif (statistic == 'sum'):
-                values = np.sum(values, axis=axis)
-            
-            elif (statistic == 'confidence'):
-                values = self.calculate_confidence_interval(values, alpha=alpha)
-            #---------------------------------------
-            
-            values = self.__check_type(values)
-        
-        return values
-    
-    
-    #===============================================
-    def apply_statistic(self, values, statistic=None, squeezy_criterium='mean'):
-        '''
-        '''
-        
-        if (values != None):
-            
-            # COMPRIME LOS VALORES DE LA GENERACION
-            values = self._statistics(values,
-                                      statistic=squeezy_criterium,
-                                      axis=1)
-            
-            # CALCULA ESTADISTICA
-            values = self._statistics(values,
-                                      statistic=statistic,
-                                      axis=0)  # axis=1
-            
-        
-        return values
-    
-    #====================================================
-    def calculate_confidence_interval(self, data, alpha=0.05):
-        '''
-        REFERENCIA: https://rpubs.com/acatania/396921
-                    https://stackoverrun.com/es/q/5277580
-        
-        Walpole, Myers, Myesr, 'Probabilidad y Estadística para ingenieros'
-        6 Ed.
-        [8 ed]--> https://drive.google.com/file/d/0B9FlUGP8i39reUg0Qk9NWDlkX2c/view
-        '''
-        
-        if not isinstance(data, np.ndarray):
-            data = np.array(data)
-        
-        N = data.shape[0]
-        
-        if (N < 30):
-            
-            CI = st.t.ppf(1-(alpha/2), N-1) * np.std(data) / np.sqrt(N) # pp 247
-        
-        else:
-            
-            CI = st.norm.ppf(1-(alpha/2)) * np.std(data) / np.sqrt(N) # pp 244
-        
-        if np.isnan(CI):
-            CI = 0.0
-        
-        return CI
-    #====================================================
-    
-    
-    #===============================================
-    def get_numero_coeficientes_seleccionados(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_fitness(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_shared_fitness(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    #===============================================
-    def get_distancias_medias(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_rank(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    #===============================================
-    def get_niche_count(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_objetivo_0(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    #===============================================
-    def get_objetivo_1(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    #===============================================
-    def get_objetivo_2(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    #===============================================
-    def get_numero_de_veces_que_se_elige_cada_feature(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_cantidad_de_mutaciones(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_cantidad_de_clusters(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_promedio_cluster(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    
-    #===============================================
-    def get_elapsed_time(self, statistic='mean', squeezy_criterium='mean'):
-        '''
-        '''
-        
-        key = inspect.stack()[0][3]  # Devuelve el nombre de la funcion
-        key = key.replace('get_','').upper()
-        
-        values = self[key]
-        
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
-        
-        return values
-    
-    #===============================================
     def get_metric(self, metric, statistic='mean', squeezy_criterium='mean'):
         '''
         '''
         
         values = self[metric.upper()]
         
-        values = self.apply_statistic(values=values,
-                                      statistic=statistic,
-                                      squeezy_criterium=squeezy_criterium)
+        values = apply_statistic(values=values,
+                                 statistic=statistic,
+                                 squeezy_criterium=squeezy_criterium)
         
         return values
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -828,6 +387,8 @@ class MULTIPLE_RUNS(object):
         
         self.train = dict()
         self.test = dict()
+        
+        self.classifiers = set()
         
         #self.repetitions = {'TRAIN': dict(),
                             #'TEST': dict()}
@@ -871,6 +432,8 @@ class MULTIPLE_RUNS(object):
                 
                 if criterium not in self.test.keys():
                     
+                    self.classifiers.update(list(data['TEST'][criterium]['CLASIFICADORES'].keys()))
+                    
                     self.test[criterium] = CLASIFIERS(data['TEST'][criterium]['CLASIFICADORES'])
                     self.test[criterium]['MEASURES'] = dict()
                     
@@ -891,8 +454,9 @@ class MULTIPLE_RUNS(object):
                         else:
                             self.test[criterium]['MEASURES'][key].append(data['TEST'][criterium][key])
                     
-                    
-                        
+            
+            self.classifiers = list(self.classifiers)
+            self.classifiers.sort()
             
     #===============================================================================
     
@@ -918,88 +482,6 @@ class MULTIPLE_RUNS(object):
         
         return parameters
     #========================================================
-    
-    
-    #====================================================
-    def apply_statistic(self, data, stat='mean', alpha=0.05):
-        '''
-        STATISTICS: [mean, median, std, mad, max, min, mode] --> axis=0 (sobre las réplicas)
-        '''
-        
-        output = []
-        
-        #-------------------------------------
-        # STATISTIC
-        #------------
-        if (stat == 'None'):
-            output = data
-        
-        elif (stat == 'mean'):
-            output = np.mean(data, axis=0)
-        
-        elif (stat == 'median'):
-            output = np.median(data, axis=0)
-        
-        elif (stat == 'std'):
-            output = np.std(data, axis=0)
-        
-        elif (stat == 'mad'):
-            values = mad(data, axis=0)
-            if isinstance(values,tuple):
-                output = values[0].flatten()
-            else:
-                output = values
-        
-        elif (stat == 'max'):
-            output = np.max(data, axis=0)
-        
-        elif (stat == 'min'):
-            output = np.min(data, axis=0)
-        
-        elif (stat == 'mode'):
-            output = mode(data, axis=0)
-        
-        elif (stat == 'sum'):
-            output = np.sum(data, axis=0)
-        
-        elif (stat == 'confidence'):
-            output = self.calculate_confidence_interval(data, alpha=alpha)
-        
-        if isinstance(output, np.ndarray):
-            output = output.tolist()
-        
-        return output
-        
-        
-    #====================================================
-    
-    
-    #====================================================
-    def calculate_confidence_interval(self, data, alpha=0.05):
-        '''
-        REFERENCIA: https://rpubs.com/acatania/396921
-        
-        '''
-        
-        if not isinstance(data, np.ndarray):
-            data = np.array(data)
-        
-        N = data.shape[0]
-        
-        if (N < 30):
-            f = st.t.interval(alpha, N-1, loc=np.mean(data), scale=st.sem(data))
-            CI = (f[1] - f[0])/2
-        
-        else:
-            
-            CI = st.norm.ppf(1-(alpha/2)) * np.std(data) / np.sqrt(N) # O debería ser ¿N-1?
-        
-        if np.isnan(CI):
-            CI = 0.0
-        
-        return CI
-    #====================================================
-    
     
     
     #====================================================
@@ -1048,7 +530,7 @@ class MULTIPLE_RUNS(object):
     
     
     #====================================================
-    def plot_summary(self, measures=[], show=True, save=False):
+    def plot_summary_train(self, measures=[], show=True, save=False):
         '''
         '''
         
@@ -1076,6 +558,60 @@ class MULTIPLE_RUNS(object):
             measure['G'] = np.arange(data.shape[1])
             
             self.plot_measure_evolution(measure, measure_name=measure_name, ax=ax[idx], show=False, save=False)
+            
+        
+        #--------------------------------------------------------------------
+        
+        plt.tight_layout()
+        
+        
+        if save:
+            plt.savefig(os.path.join(self.path,'evolution_of_several_measures.pdf'), dpi=300)
+            plt.savefig(os.path.join(self.path,'evolution_of_several_measures.png'), dpi=300)
+        
+        if show:
+            plt.show()
+    
+        
+        plt.close(fig)  # NO OLVIDAR ESTO PARA QUE NO QUEDE CARGADA EN MEMORIA!!!
+                        # https://heitorpb.github.io/bla/2020/03/18/close-matplotlib-figures/
+    #====================================================
+    
+    #====================================================
+    def plot_summary_test(self, measures=[], show=True, save=False):
+        '''
+        '''
+        
+        CRITERIOS = list(self.test.keys())
+        
+        N = len(measures) * len(CRITERIOS) * len(self.classifiers)
+        
+        #--------------------------------------------------------------------
+        fig, ax = plt.subplots(N, 1, figsize=(8, 2*N))
+        
+        for criterio in CRITERIOS:
+            
+            for classifier in self.classifiers:
+            
+                for idx, measure_name in enumerate(measures):
+                    
+                    data = np.array(self.test[criterio][classifier].metrics[measure_name])
+                    
+                    MEASURE = {'mean':[], 'median':[], 'max':[], 'min':[], 'G': None}
+                    
+                    #-------------------------------------------------------------
+                    if (data.ndim > 2):
+                        data = np.concatenate(data, axis=1)
+                        data = data.T
+                    #-------------------------------------------------------------
+                    
+                    MEASURE['mean'] = np.mean(data, axis=0)
+                    MEASURE['median'] = np.median(data, axis=0)
+                    MEASURE['max'] = np.max(data, axis=0)
+                    MEASURE['min'] = np.min(data, axis=0)
+                    MEASURE['G'] = np.arange(data.shape[1])
+                    
+                    self.plot_measure_evolution(MEASURE, measure_name=measure_name, ax=ax[idx], show=False, save=False)
             
         
         #--------------------------------------------------------------------
@@ -1127,8 +663,7 @@ class MULTIPLE_RUNS(object):
         #================
         # TRAIN
         #================
-        if (TEMPLATE['TRAIN'] != None):
-            report += 'TRAIN,\n'
+        report += 'TRAIN,\n'
         
         
         #----------
@@ -1159,8 +694,6 @@ class MULTIPLE_RUNS(object):
         #================
         # TEST
         #================
-        #if (TEMPLATE['TRAIN'] != None):
-            #report += 'TEST,\n'
         report += 'TEST,\n'
         
         for criterium in self.test.keys():
@@ -1180,8 +713,8 @@ class MULTIPLE_RUNS(object):
                     # APLICO ESTADÏSTICAS
                     for statistic in TEMPLATE['TEST']['MEASURES'][measure]['STATISTICS']:
                         
-                        values = self.apply_statistic(self.test[criterium]['MEASURES'][measure],
-                                                      stat=statistic)
+                        values = statistics(self.test[criterium]['MEASURES'][measure],
+                                            statistic=statistic)
                         
                         if isinstance(values, list):
                             values = values[0]
@@ -1217,8 +750,7 @@ class MULTIPLE_RUNS(object):
                         #-----------------------------------------------
                         # LA ESTADISTICA SE APLICA EN EL REPORTE!!
                         #-----------------------------------------------
-                        values = self.apply_statistic(values,
-                                                      stat=statistic)
+                        values = statistics(values, statistic=statistic)
                         
                         
                         report += '{}_{},{}\n'.format(metric,statistic,values)
@@ -1252,9 +784,10 @@ class MULTIPLE_RUNS(object):
         #----------------------------------------
         # GUARDO GRAFICOS REPRESENTATIVOS
         #----------------------------------------
-        #######################################
-        # PLOT EVOLUTION OF SEVERAL MEASURES
-        #######################################
+        
+        ###############################################
+        # TRAIN - PLOT EVOLUTION OF SEVERAL MEASURES
+        ###############################################
         MEASURES = ['NUMERO_COEFICIENTES_SELECCIONADOS',
                     'FITNESS',
                     'SHARED_FITNESS',
@@ -1267,7 +800,27 @@ class MULTIPLE_RUNS(object):
                     'CANTIDAD_DE_MUTACIONES',
                     'CANTIDAD_DE_CLUSTERS']
         
-        self.plot_summary(measures=MEASURES, show=False, save=True)
+        self.plot_summary_train(measures=MEASURES, show=False, save=True)
+        
+        
+        ###############################################
+        # TEST - PLOT EVOLUTION OF SEVERAL MEASURES
+        ###############################################
+        #MEASURES = ['MEDIDA_PARA_ELEGIR_EL_MEJOR_R1',
+                    #'MEDIDA_PARA_ELEGIR_EL_MEJOR_R2']
+                    ##'CRITERIO_R1',
+                    ##'CRITERIO_R2']
+                    ##'NUMERO_COEFICIENTES_SELECCIONADOS',
+                    ##'FITNESS',
+                    ##'SHARED_FITNESS',
+                    ##'OBJETIVO_0',
+                    ##'OBJETIVO_1',
+                    ##'OBJETIVO_2',
+                    ##'DISTANCIAS_MEDIAS',
+                    ##'CANTIDAD_DE_MUTACIONES',
+                    ##'CANTIDAD_DE_CLUSTERS']
+        
+        #self.plot_summary_test(measures=MEASURES, show=False, save=True)
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 

@@ -2,14 +2,21 @@ import os
 import glob
 import numpy as np
 import json
+
+# --> https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
+# pip install pyyaml
+# si no funciona, instalar con apt/dnf: yaml-cppdev/yaml-cpp-devel + PyYaml + LibYaml
 import yaml
+from yaml import CLoader as Loader  #, CDumper as Dumper 
+
 import pandas as pd
 import io
 
 #import streamlit as st
 import matplotlib.pyplot as plt
 from matplotlib import cm
-import matplotlib
+from matplotlib.colors import Normalize
+
 import seaborn as sns
 from celluloid import Camera
 
@@ -34,14 +41,24 @@ def procesar_experimentos(root_path, lib_path):
     
     paths_to_subfolders = [x[0] for x in os.walk('{}'.format(root_path))]
     
+    #------------------------------------------------------
+    listOfFiles = list()
+    for (dirpath, dirnames, filenames) in os.walk(root_path):
+        listOfFiles += [filename for filename in filenames if ('.train' in filename)]
+
+    N = len(listOfFiles)
+    #------------------------------------------------------
     
+    n = 0
     for path in paths_to_subfolders:
         
         filename = glob.glob(os.path.join(path,'*.train'))  # Devuelve una lista
         
         if filename:
             
-            print('\nProcesando {}...'.format(path))
+            n += 1
+            
+            print('\n[{}/{}] Procesando {}...'.format(n, N, path))
             
             se = SINGLE_EXPERIMENT(filename[0], lib_path=lib_path)
             
@@ -76,6 +93,7 @@ class SINGLE_EXPERIMENT(object):
         '''
         '''
         
+        #self.lib_path = os.path.abspath(lib_path)
         self.lib_path = lib_path
         
         full_path = os.path.abspath(filename)
@@ -98,8 +116,8 @@ class SINGLE_EXPERIMENT(object):
         #===================
         
         #---------------------------------------------------------------
-        with open(os.path.join(self.path,filename_train),'r') as fp:
-            train_report = yaml.load(fp, Loader=yaml.FullLoader)
+        with open(os.path.join(self.path, filename_train),'r') as fp:
+            train_report = yaml.load(fp, Loader=Loader)  # yaml.FullLoader)
         
         self.generations = []
         self.general = dict()
@@ -412,17 +430,38 @@ class SINGLE_EXPERIMENT(object):
         #key = key.replace('from_pareto_get_index_for_best_','').upper()
         #data = self._procesar_pareto(key, -1)
         
-        if (criterium == 'R1'):
-            measures = self.pareto['MEDIDA_PARA_ELEGIR_EL_MEJOR_R1'][-1][:]
-        elif (criterium == 'R2'):
-            measures = self.pareto['MEDIDA_PARA_ELEGIR_EL_MEJOR_R2'][-1][:]
+        KEYS = list(self.pareto.keys())
+        
+        key = [key for key in KEYS if (criterium in key)]
+        
+        measures = None
+        
+        if len(key) == 1:
+            key = key[0]
+            measures = self.pareto[key][-1][:]
         
         else:
             print('Unknown criterium...\n')
+            
         
-        idx = int(np.argmax(measures))
+        if (measures != None):
+            idx = int(np.argmax(measures))
+        else:
+            idx = None
         
         return idx
+            
+        #if (criterium == 'R1'):
+            #measures = self.pareto['MEDIDA_PARA_ELEGIR_EL_MEJOR_R1'][-1][:]
+        #elif (criterium == 'R2'):
+            #measures = self.pareto['MEDIDA_PARA_ELEGIR_EL_MEJOR_R2'][-1][:]
+        
+        #else:
+            #print('Unknown criterium...\n')
+        
+        #idx = int(np.argmax(measures))
+        
+        #return idx
     #====================================================
     
     
@@ -489,6 +528,8 @@ class SINGLE_EXPERIMENT(object):
         
         if (ax == None):
             plt.close(fig)
+        
+        #plt.close(fig)
     #====================================================
     
     
@@ -539,8 +580,10 @@ class SINGLE_EXPERIMENT(object):
         if show:
             plt.show()
         
-        if (ax == None):
-            plt.close(fig)
+        #if (ax == None):
+            #plt.close(fig)
+        
+        plt.close(fig)
     #====================================================
     
     
@@ -556,30 +599,47 @@ class SINGLE_EXPERIMENT(object):
     
     
     #====================================================
-    def plot_evolution_of_best_UAR(self, criterium='R1', ax=None, show=True, save=False):
+    def plot_evolution_of_best_OBJECTIVE(self, objective=0, criterium='R1', ax=None, show=True, save=False):
         '''
         '''
         
-        if (criterium == 'R1'):
-            measures = self.pareto['MEDIDA_PARA_ELEGIR_EL_MEJOR_R1']
+        #if (criterium == 'R1'):
+            #measures = self.pareto['MEDIDA_PARA_ELEGIR_EL_MEJOR_R1']
             
-        elif (criterium == 'R2'):
-            measures = self.pareto['MEDIDA_PARA_ELEGIR_EL_MEJOR_R2']
+        #elif (criterium == 'R2'):
+            #measures = self.pareto['MEDIDA_PARA_ELEGIR_EL_MEJOR_R2']
+        #else:
+            #print('Unknown criterium...\n')
+        
+        OBJETIVO = 'OBJETIVO_{}'.format(objective)
+        
+        KEYS = list(self.pareto.keys())
+        
+        if OBJETIVO in KEYS:
+        
+            key = [key for key in KEYS if (criterium in key)]
+            
+            if len(key) == 1:
+                key = key[0]
+                measures = self.pareto[key]
+                
+                UAR = []
+            
+                for i,measure in enumerate(measures):
+                    idx = int(np.argmax(measure))
+                    UAR.append(self.pareto[OBJETIVO][i][idx])
+                
+                MEASURE = {'mean':[], 'median':[], 'max':[], 'min':[], 'raw':UAR}
+                
+                self.plot_measure_evolution(MEASURE, '{} [{} criterium]'.format(OBJETIVO, criterium), ax=ax, show=show, save=save)
+            
+            
+            else:
+                print('Unknown criterium...\n')
+        
         else:
-            print('Unknown criterium...\n')
-        
-        UAR = []
-        
-        for i,measure in enumerate(measures):
-            idx = int(np.argmax(measure))
-            UAR.append(self.pareto['OBJETIVO_1'][i][idx])
-        
-        measure = {'mean':[], 'median':[], 'max':[], 'min':[], 'raw':UAR}
-        
-        self.plot_measure_evolution(measure, 'UAR [{} criterium]'.format(criterium), ax=ax, show=show, save=save)
-        
-        
-        
+            print('Unknown objective...\n')
+                
     #====================================================
     
     
@@ -634,7 +694,7 @@ class SINGLE_EXPERIMENT(object):
         '''
         #import numpy as np
         #from matplotlib import pyplot as plt
-        from matplotlib.colors import Normalize
+        #from matplotlib.colors import Normalize
         #fig = plt.figure()
         
         fig, ax = plt.subplots(1,1, figsize=(8,8))
@@ -670,7 +730,11 @@ class SINGLE_EXPERIMENT(object):
         
             camera.snap()
         
-        fig.colorbar(cm.ScalarMappable(norm=Normalize(vmin=0, vmax=1, clip=False), cmap='jet'), ax=ax)
+        fig.colorbar(cm.ScalarMappable(norm=Normalize(vmin=0,
+                                                      vmax=1,
+                                                      clip=False),
+                                       cmap='jet'),
+                     ax=ax)
         
         animation = camera.animate()
         
@@ -678,15 +742,9 @@ class SINGLE_EXPERIMENT(object):
             plt.show()
         
         if save:
-            with matplotlib.use('Agg'):
+            with matplotlib.use('qt5agg'):
                 animation.save(os.path.join(self.path,'pareto_front_animated.gif'),
-                           writer='imagemagick')
-        #if save:
-            #animation.save(os.path.join(self.path,'pareto_front_animated.gif'),
-                           #writer='imagemagick')
-                   
-    
-    
+                               writer='imagemagick')
     
     
     #====================================================
@@ -780,19 +838,18 @@ class SINGLE_EXPERIMENT(object):
         ax.legend([r'mean', r'median'], loc='best')
         
         plt.tight_layout()
-        #fig.tight_layout(pad=4.0)
         
         
         if save:
-            plt.savefig(os.path.join(self.path,'Evolucion_en_la_distancia_media_en_el_frente_de_Pareto.pdf'), dpi=600)
-            plt.savefig(os.path.join(self.path,'Evolucion_en_la_distancia_media_en_el_frente_de_Pareto.png'), dpi=600)
+            plt.savefig(os.path.join(self.path, 'Evolucion_en_la_distancia_media_en_el_frente_de_Pareto.pdf'), dpi=600)
+            plt.savefig(os.path.join(self.path, 'Evolucion_en_la_distancia_media_en_el_frente_de_Pareto.png'), dpi=600)
         
         if show:
             plt.show()
         
-        
-        if (ax == None):
-            plt.close(fig)  # NO OLVIDAR ESTO PARA QUE NO QUEDE CARGADA EN MEMORIA!!!
+        plt.close(fig)
+        #if (ax == None):
+            #plt.close(fig)  # NO OLVIDAR ESTO PARA QUE NO QUEDE CARGADA EN MEMORIA!!!
                             # https://heitorpb.github.io/bla/2020/03/18/close-matplotlib-figures/
     #====================================================
     
@@ -807,7 +864,7 @@ class SINGLE_EXPERIMENT(object):
         '''
         '''
         
-        N = len(measures) + 2
+        N = len(measures) + 4  # UAR y NFeatures
         
         #--------------------------------------------------------------------
         fig, ax = plt.subplots(N, 1, figsize=(8, 2*N))
@@ -824,6 +881,11 @@ class SINGLE_EXPERIMENT(object):
                     measure = {'mean':[], 'median':[], 'max':[], 'min':[], 'raw':None}
                     
                     for d in data:
+                        
+                        # FUERZO LA CONVERSION A FLOAT
+                        # La lista toma "1e-5" como string sino.
+                        d = np.array(d).astype(np.float64)
+                        
                         measure['mean'].append(float(np.mean(d)))
                         measure['median'].append(float(np.median(d)))
                         measure['max'].append(float(np.max(d)))
@@ -844,6 +906,11 @@ class SINGLE_EXPERIMENT(object):
                     measure = {'mean':[], 'median':[], 'max':[], 'min':[], 'raw':None}
                     
                     for d in data:
+                        
+                        # FUERZO LA CONVERSION A FLOAT
+                        # La lista toma "1e-5" como string sino.
+                        d = np.array(d).astype(np.float64)
+                        
                         measure['mean'].append(float(np.mean(d)))
                         measure['median'].append(float(np.median(d)))
                         measure['max'].append(float(np.max(d)))
@@ -858,9 +925,23 @@ class SINGLE_EXPERIMENT(object):
             
         #--------------------------------------------------------------------
         
-        self.plot_evolution_of_best_UAR(criterium='R1', ax=ax[idx+1], show=False, save=False)
+        #---------
+        # UAR
+        #---------
+        self.plot_evolution_of_best_OBJECTIVE(objective=0, criterium='R1', ax=ax[idx+1], show=False, save=False)
+        #self.plot_evolution_of_best_UAR(criterium='R1', ax=ax[idx+1], show=False, save=False)
         
-        self.plot_evolution_of_best_UAR(criterium='R2', ax=ax[idx+2], show=False, save=False)
+        self.plot_evolution_of_best_OBJECTIVE(objective=0, criterium='R2', ax=ax[idx+2], show=False, save=False)
+        #self.plot_evolution_of_best_UAR(criterium='R2', ax=ax[idx+2], show=False, save=False)
+        
+        #----------------------------------------
+        
+        #-----------
+        # NFeatures
+        #-----------
+        self.plot_evolution_of_best_OBJECTIVE(objective=1, criterium='R1', ax=ax[idx+3], show=False, save=False)
+        self.plot_evolution_of_best_OBJECTIVE(objective=1, criterium='R2', ax=ax[idx+4], show=False, save=False)
+        
         
         #--------------------------------------------------------------------
         
@@ -890,8 +971,8 @@ class SINGLE_EXPERIMENT(object):
         
         '''
         
-        with open(self.lib_path + 'experiment_summary_template.yaml', 'r') as fp:
-            TEMPLATE = yaml.load(fp, Loader=yaml.FullLoader)
+        with open(os.path.join(self.lib_path, 'experiment_summary_template.yaml'), 'r') as fp:
+            TEMPLATE = yaml.load(fp, Loader=Loader)  # yaml.FullLoader)
         
         
         SUMMARY = {
