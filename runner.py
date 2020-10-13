@@ -9,6 +9,7 @@ import timeit
 import yaml
 import itertools
 
+import json
 
 #=====================================================
 import argparse
@@ -64,7 +65,7 @@ experiments = list(itertools.product(*L))
 # BUILDING EXPERIMENT SEQUENCE
 #======================================
 EXPERIMENTOS = []
-
+FOLDERS = []
 for experiment in experiments:
     
     #-------------------------------------------
@@ -81,17 +82,18 @@ for experiment in experiments:
     # FILTRO LO QUE NO SE MODIFICA POR FALSE
     USAR = dict()
     
-    for k1,v in zip(names, experiment):
+    for name,value in zip(names,experiment):
         
-        if (SETTINGS_RUNNER['DEPENDENCIAS'] is not None) and ((k1 in SETTINGS_RUNNER['DEPENDENCIAS'].keys()) and (v == False)):
-            USAR[k1] = True
+        # NO CARGUE PREVIAMENTE EL VALOR
+        if name not in USAR:
             
-            for k2 in SETTINGS_RUNNER['DEPENDENCIAS'][k1]:
-                USAR[k2] = False
+            USAR[name] = True
+            
+            if (name in SETTINGS_RUNNER['DEPENDENCIAS']) and (value == False):
                 
-        else:
-            if (k1 not in USAR):
-                USAR[k1] = True
+                for key in SETTINGS_RUNNER['DEPENDENCIAS'][name]:
+                    
+                    USAR[key] = False
         
     #---------------------------------------
     
@@ -113,22 +115,55 @@ for experiment in experiments:
     #########################################################
     # EVITO REPETIR EXPERIMENTOS POR CARPETAS REPETIDAS!!
     #########################################################
-    if folder not in EXPERIMENTOS:
+    if folder not in FOLDERS:
         EXPERIMENTOS.append([folder, parameters])
-        
+        FOLDERS.append(folder)
 
-# NUMERO TOTAL DE EXPERIMENTOS
-N = len(EXPERIMENTOS) * int(args['repetitions'])
+
+
+if (args['experiment_path'][-1] != '/'):
+    folder = args['experiment_path'] + '/'
+else:
+    folder = args['experiment_path'] + ''
+
+with open(os.path.join(folder,'EXPERIMENTOS.temp'), 'w') as fp:
+    json.dump(EXPERIMENTOS, fp, indent=4)
+
+#with open(os.path.join(folder,'FOLDERS.temp'), 'w') as fp:
+    #fp.write('\n'.join(FOLDERS))
+
+
+base_folder = folder
+
+del FOLDERS
+del EXPERIMENTOS
+
+
     
 ###########################################
 # COMIENZO LA SECUQNCIA DE EXPERIMENTOS
 ###########################################
+
+# AGREGAR ACA CODIGO PARA QUE LEA "EXPERIMENTOS.temp"
+# Y RETOME LA SECUENCIA (pisa replicas)
+
+with open(os.path.join(base_folder,'EXPERIMENTOS.temp'), 'r') as fp:
+    EXPERIMENTS = json.load(fp)
+
+
+# NUMERO TOTAL DE EXPERIMENTOS
+N = len(EXPERIMENTS) * int(args['repetitions'])
+    
+
 log_line = 'Starting experiment sequence...\n\n'
 print(log_line)
 LOG += log_line
 
 n = 0
-for (folder,PARAMETERS) in EXPERIMENTOS:
+#for (folder,PARAMETERS) in EXPERIMENTOS:
+while EXPERIMENTS:
+    
+    folder,PARAMETERS = EXPERIMENTS.pop(0)
     
     #-------------------------------------------
     log_line = '\n########################################################\n\n'
@@ -240,6 +275,15 @@ for (folder,PARAMETERS) in EXPERIMENTOS:
     log_line = 'Ending: {}\n\n'.format(str(end_time))
     #print(log_line)
     LOG += log_line
+    
+    
+    
+    # SALVO EXPERIMENTOS
+    with open(os.path.join(base_folder,'EXPERIMENTOS.temp'), 'w') as fp:
+        json.dump(EXPERIMENTS,fp, indent=4)
+    
+    with open(os.path.join(base_folder,'EXPERIMENTOS.temp'), 'r') as fp:
+        EXPERIMENTS = json.load(fp)
     
 
 ending_run_time = timeit.time.strftime("%Y%m%d-%H%M%S")
