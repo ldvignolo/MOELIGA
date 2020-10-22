@@ -551,6 +551,8 @@ class MULTIPLE_RUNS(object):
                 data = data.T
             #-------------------------------------------------------------
             
+            data = data.astype(np.float64)  # Llegan datos '1e-5' y son tomados como "str"
+            
             measure['mean'] = np.mean(data, axis=0)
             measure['median'] = np.median(data, axis=0)
             measure['max'] = np.max(data, axis=0)
