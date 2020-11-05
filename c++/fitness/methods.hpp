@@ -316,13 +316,13 @@ arma::Row<size_t> TrainTestClassifier(arma::mat trn_data, arma::mat tst_data, ar
         geek >> par2; 
         geek >> par3;              
 
-        mlpack::svm::LinearSVM<> method(trn_data,                        //  Independent variables  
-                                        trn_labels,                      //  Dependent variables                                             
-                                        numClasses,                      //  number of classes  
-                                        par1,                            //  number of features
-                                        par2,                            //  (double) lambda:  L2-regularization constant.
-                                        par3);                           //  (double) delta:   Margin of difference between correct class and other classes.
-                                                                         //  (bool) shuffle:     
+        mlpack::svm::LinearSVM<> method(trn_data,                        //  Independent variables                                                         
+                                        trn_labels,                      //  Dependent variables                                                           
+                                        numClasses,                      //  number of classes                                                             
+                                        par1,                            //  (double) lambda: L2-regularization constant.                                  
+                                        par2,                            //  (double) delta: Margin of difference between correct class and other classes. 
+                                        par3);                           //  (bool) fitIntercept: add intercept term or not.
+                                                                            
         method.Classify(tst_data, output);  
         
     }
