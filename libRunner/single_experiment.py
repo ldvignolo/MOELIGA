@@ -1,6 +1,7 @@
 import os
 import glob
 import numpy as np
+#np.set_printoptions(suppress=True)  # Desactiva la notación científica
 import json
 
 # --> https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
@@ -25,13 +26,58 @@ from scipy.stats import mode
 
 import inspect
 
+from multiprocessing import Pool
+#from threading import Pool
 
+
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+def serialize_json(json_object):
+    
+    for k,v in json_object.items():
+        
+        if isinstance(v, dict):
+            json_object = serialize_json(json_object)
+        
+        elif isinstance(v, np.ndarray):
+            json_object[k] = v.tolist()
+        
+        else:
+            return json_object
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-def procesar_experimentos(root_path, lib_path):
+def procesar_experimento(info):
+    
+    path, lib_path = info
+    
+    filename = glob.glob(os.path.join(path,'*.train'))  # Devuelve una lista
+        
+    if filename:
+        
+        #n += 1
+        
+        #print('\n[{}/{}] Procesando {}...'.format(n, N, path))
+        print('\nProcesando {}...'.format(path))
+        
+        se = SINGLE_EXPERIMENT(filename[0], lib_path=lib_path)
+        
+        se.build_summary()
+        
+        # GUARDAR OBJETO CON PICKLE O DILL??
+        
+        del se
+        
+        #print('Done!!\n')
+
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+def procesar_experimentos(root_path, lib_path, n_jobs=2):
     '''
     Esta funcion recorre todas las carpetas desde el root del experimento
     completo y procesa cada corrida generando las gráficas y el summary de
@@ -49,35 +95,14 @@ def procesar_experimentos(root_path, lib_path):
     N = len(listOfFiles)
     #------------------------------------------------------
     
-    n = 0
-    for path in paths_to_subfolders:
-        
-        filename = glob.glob(os.path.join(path,'*.train'))  # Devuelve una lista
-        
-        if filename:
-            
-            n += 1
-            
-            print('\n[{}/{}] Procesando {}...'.format(n, N, path))
-            
-            se = SINGLE_EXPERIMENT(filename[0], lib_path=lib_path)
-            
-            se.build_summary()
-            
-            # GUARDAR OBJETO CON PICKLE O DILL??
-            
-            del se
-            
-            print('Done!!\n')
+    #n = 0
+    
+    
+    
+    with Pool(n_jobs) as p:
+        p.map(procesar_experimento, zip(paths_to_subfolders,[lib_path]*len(paths_to_subfolders)))
+    
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
-
-
-
-
-
-
 
 
 
@@ -201,7 +226,7 @@ class SINGLE_EXPERIMENT(object):
                 if (k not in self.pareto.keys()):
                     self.pareto[k] = []
                 
-                self.pareto[k].append(v)
+                self.pareto[k].append(np.array(v))
             #------------------------------------------------------
             
         
@@ -262,6 +287,9 @@ class SINGLE_EXPERIMENT(object):
         
         STATISTICS: [mean, median, std, mad, max, min, mode] --> axis=0
         '''
+        
+        #if isinstance(data, list) and isinstance(data[0], np.ndarray):
+            #data = [array.tolist() for array in data]
         
         if (squeezy_criterium != None):
             data = self._statistics(data, statistic=squeezy_criterium, axis=1)
@@ -434,7 +462,7 @@ class SINGLE_EXPERIMENT(object):
         
         key = [key for key in KEYS if (criterium in key)]
         
-        measures = None
+        measures = []  # None
         
         if len(key) == 1:
             key = key[0]
@@ -444,7 +472,7 @@ class SINGLE_EXPERIMENT(object):
             print('Unknown criterium...\n')
             
         
-        if (measures != None):
+        if not isinstance(measures, list):
             idx = int(np.argmax(measures))
         else:
             idx = None
@@ -464,6 +492,44 @@ class SINGLE_EXPERIMENT(object):
         #return idx
     #====================================================
     
+    
+    
+    
+    
+    
+    #====================================================
+    def from_pareto_get_objectives_evolution(self, criterium='R1'):
+        '''
+        Esta función toma el mejor individuo del frente de acuerdo al criterio seleccionado ("criterium")
+        y devuelve el seguimiento de los objetivos para ese individuo.
+        '''
+        
+        KEYS = list(self.pareto.keys())
+        
+        N = len([key for key in KEYS if ('OBJETIVO_' in key)])
+        
+        key = [key for key in KEYS if (criterium in key)]
+        
+        
+        if len(key) == 1:
+            
+            key = key[0]
+            
+            idxs = [np.argmax(x) for x in self.pareto[key]]
+            
+            measures = np.zeros((len(idxs), N))
+            
+            for i in range(N):
+                measures[:,i] = np.array([self.pareto['OBJETIVO_{}'.format(i)][j][idx] for j,idx in enumerate(idxs)])
+        
+            
+            return measures.tolist()
+            
+        else:
+            print('Unknown criterium...\n')
+            return None
+            
+    #====================================================
     
 
     
@@ -993,19 +1059,38 @@ class SINGLE_EXPERIMENT(object):
                 t.insert(0,0)
                 SUMMARY['TRAIN'][key] = np.diff(t).tolist()
             
-            else:
+            
+            elif ('MEDIDA_PARA_ELEGIR_EL_MEJOR_R' in key):
+                SUMMARY['TRAIN'][key] = [array.tolist() for array in self.pareto[key]]
+            
+            
+            elif ('_OBJETIVOS' in key):
                 
+                #values = from_pareto_get_objectives_evolution(criterium=key.replace('_OBJETIVOS',''))
+                
+                #values = self.apply_statistic(values,
+                                              #statistic=None,
+                                              #squeezy_criterium=squeezy_criterium
+                                             #)
+                
+                SUMMARY['TRAIN'][key] = self.from_pareto_get_objectives_evolution(criterium=key.replace('_OBJETIVOS',''))
+            
+            
+            else:
                 values = self.apply_statistic(self.general[key],
                                               statistic=None,
                                               squeezy_criterium=squeezy_criterium
                                              )
                 
-                
                 if isinstance(values, np.ndarray):
                     SUMMARY['TRAIN'][key] = values.tolist()
                 
                 elif isinstance(values, list):
-                    SUMMARY['TRAIN'][key] = values[:]
+                    #SUMMARY['TRAIN'][key] = values[:]
+                    if isinstance(values[0], np.ndarray):
+                        SUMMARY['TRAIN'][key] = [array.tolist() for array in values]
+                    else:
+                        SUMMARY['TRAIN'][key] = values[:]
                 
                 elif isinstance(values, np.int64):
                     SUMMARY['TRAIN'][key] = int(values)
@@ -1018,10 +1103,9 @@ class SINGLE_EXPERIMENT(object):
                 
                 else:
                     print('No se puede guardar el valor para {} [Type: {}]'.format(key, type(values)))
-                    
                 
-        
-        
+            
+            #print(key, SUMMARY['TRAIN'][key])
         
         #===============
         # TEST
@@ -1047,7 +1131,12 @@ class SINGLE_EXPERIMENT(object):
                 
             for measure in TEMPLATE['TEST']['MEASURES']:
                 
-                SUMMARY['TEST'][criterium][measure] = individuo[measure]
+                value = individuo[measure]
+                
+                if isinstance(value, np.ndarray):
+                    value = value.tolist()
+                
+                SUMMARY['TEST'][criterium][measure] = value
                 
                 
             #-------------------------------------------------------
@@ -1060,6 +1149,10 @@ class SINGLE_EXPERIMENT(object):
                     SUMMARY['TEST'][criterium]['CLASIFICADORES'][clasificador] = dict()
                 
                 for key,value in individuo['CLASIFICADORES'][clasificador].items():
+                    
+                    if isinstance(value, np.ndarray):
+                        value = value.tolist()
+                        
                     SUMMARY['TEST'][criterium]['CLASIFICADORES'][clasificador][key] = value
                 
                 metrics = self.from_confusion_matrix_get_measures(individuo['CLASIFICADORES'][clasificador]['CONFUSION_MATRIX'], as_list=True)
@@ -1076,6 +1169,8 @@ class SINGLE_EXPERIMENT(object):
         #-------------------------------
         # SAVE SUMMARY IN JSON FORMAT
         #-------------------------------
+        #SUMMARY = serialize_json(SUMMARY)
+        
         with open(os.path.join(self.path,'experiment_summary.json'), 'w') as fp:
             json.dump(SUMMARY, fp)
         
@@ -1100,13 +1195,13 @@ class SINGLE_EXPERIMENT(object):
         # PLOT EVOLUTION OF UAR [R1 y R2]
         #--------------------------------------
         #self.plot_evolution_of_best_UAR(criterium='R2', ax=None, show=False, save=True)
-        self.plot_summary(measures=MEASURES, show=False, save=True)
+        # --> self.plot_summary(measures=MEASURES, show=False, save=True)
         
         
         #--------------------------------------
         # PLOT EVOLUTION OF FEATURES SELECTED
         #--------------------------------------
-        self.plot_histogram_evolution_of_features_selected(show=False, save=True)
+        # --> self.plot_histogram_evolution_of_features_selected(show=False, save=True)
         
         #--------------------
         # PLOT PARETO FRONT
@@ -1128,7 +1223,6 @@ class SINGLE_EXPERIMENT(object):
 
 #=============================================
 if __name__ == '__main__':
-    
     
     import sys
     
