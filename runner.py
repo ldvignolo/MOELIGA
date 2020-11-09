@@ -19,6 +19,7 @@ parser.add_argument('-s', '--experiment_settings', default='runner_settings.yaml
 parser.add_argument('-e', '--eliga_settings', default=None, help='Settings file for ELIGA.')
 parser.add_argument('-p', '--experiment_path', default='out/', help='Path to output results. By default it is "out/".')
 parser.add_argument('-r', '--repetitions', default=10, help='Number of times that the same parameters must be evaluated.')
+parser.add_argument('-c', '--resume', default='False', type=(lambda x: x.lower() in ("yes", "true", "t", "1")), help='Boolean flag indicating if experiment should be restored from checkpoint.')
 parser.add_argument('-n', '--notification', action='store_true', help='Telegram notification.')
 
 args = vars(parser.parse_args())
@@ -42,82 +43,86 @@ print(log_line)
 LOG = log_line
 
 
-#---------------------------------------
-# LOAD EXPERIMENT SETTINGS FILE
-#---------------------------------
-with open(args['experiment_settings'], 'r') as f:
-    
-    if (sys.version_info.major < 3) or (sys.version_info.minor < 6):
-        SETTINGS_RUNNER = yaml.load(f)  # 2.7 and < 3.6
-        
-    else:
-        SETTINGS_RUNNER = yaml.load(f, Loader=yaml.FullLoader)
-#---------------------------------------    
-
-names = list(SETTINGS_RUNNER['PARAMETERS'].keys())
-
-L = [SETTINGS_RUNNER['PARAMETERS'][name] for name in names]
-
-experiments = list(itertools.product(*L))
-
-
-#======================================
-# BUILDING EXPERIMENT SEQUENCE
-#======================================
 EXPERIMENTOS = []
 FOLDERS = []
-for experiment in experiments:
+
+
+if not args['resume']:
     
-    #-------------------------------------------
-    if (args['experiment_path'][-1] != '/'):
-        folder = args['experiment_path'] + '/'
-    else:
-        folder = args['experiment_path'] + ''
-    
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-        
-    parameters = dict()
-    
-    # FILTRO LO QUE NO SE MODIFICA POR FALSE
-    USAR = dict()
-    
-    for name,value in zip(names,experiment):
-        
-        # NO CARGUE PREVIAMENTE EL VALOR
-        if name not in USAR:
-            
-            USAR[name] = True
-            
-            if (name in SETTINGS_RUNNER['DEPENDENCIAS']) and (value == False):
-                
-                for key in SETTINGS_RUNNER['DEPENDENCIAS'][name]:
-                    
-                    USAR[key] = False
-        
     #---------------------------------------
-    
-    
-    for k,v in zip(names, experiment):
+    # LOAD EXPERIMENT SETTINGS FILE
+    #---------------------------------
+    with open(args['experiment_settings'], 'r') as f:
         
-        if USAR[k]:
+        if (sys.version_info.major < 3) or (sys.version_info.minor < 6):
+            SETTINGS_RUNNER = yaml.load(f)  # 2.7 and < 3.6
             
-            folder += '{}__{}/'.format(k,v)
-            parameters[k] = v
+        else:
+            SETTINGS_RUNNER = yaml.load(f, Loader=yaml.FullLoader)
+    #---------------------------------------    
+
+    names = list(SETTINGS_RUNNER['PARAMETERS'].keys())
+
+    L = [SETTINGS_RUNNER['PARAMETERS'][name] for name in names]
+
+    experiments = list(itertools.product(*L))
+
+
+    #======================================
+    # BUILDING EXPERIMENT SEQUENCE
+    #======================================
+    for experiment in experiments:
+        
+        #-------------------------------------------
+        if (args['experiment_path'][-1] != '/'):
+            folder = args['experiment_path'] + '/'
+        else:
+            folder = args['experiment_path'] + ''
+        
+        if not os.path.exists(folder):
+            os.makedirs(folder)
             
-            folder = folder.replace('True', 'true')
-            folder = folder.replace('False', 'false')
+        parameters = dict()
+        
+        # FILTRO LO QUE NO SE MODIFICA POR FALSE
+        USAR = dict()
+        
+        for name,value in zip(names,experiment):
             
-            if not os.path.exists(folder):
-                os.makedirs(folder)
-    
-    
-    #########################################################
-    # EVITO REPETIR EXPERIMENTOS POR CARPETAS REPETIDAS!!
-    #########################################################
-    if folder not in FOLDERS:
-        EXPERIMENTOS.append([folder, parameters])
-        FOLDERS.append(folder)
+            # NO CARGUE PREVIAMENTE EL VALOR
+            if name not in USAR:
+                
+                USAR[name] = True
+                
+                if (name in SETTINGS_RUNNER['DEPENDENCIAS']) and (value == False):
+                    
+                    for key in SETTINGS_RUNNER['DEPENDENCIAS'][name]:
+                        
+                        USAR[key] = False
+            
+        #---------------------------------------
+        
+        
+        for k,v in zip(names, experiment):
+            
+            if USAR[k]:
+                
+                folder += '{}__{}/'.format(k,v)
+                parameters[k] = v
+                
+                folder = folder.replace('True', 'true')
+                folder = folder.replace('False', 'false')
+                
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+        
+        
+        #########################################################
+        # EVITO REPETIR EXPERIMENTOS POR CARPETAS REPETIDAS!!
+        #########################################################
+        if folder not in FOLDERS:
+            EXPERIMENTOS.append([folder, parameters])
+            FOLDERS.append(folder)
 
 
 
@@ -126,12 +131,16 @@ if (args['experiment_path'][-1] != '/'):
 else:
     folder = args['experiment_path'] + ''
 
-with open(os.path.join(folder,'EXPERIMENTOS.temp'), 'w') as fp:
-    json.dump(EXPERIMENTOS, fp, indent=4)
-
-#with open(os.path.join(folder,'FOLDERS.temp'), 'w') as fp:
-    #fp.write('\n'.join(FOLDERS))
-
+#--------------------------------------------------------------------
+# CHECKPOINT
+if not args['resume']:
+    
+    with open(os.path.join(folder,'EXPERIMENTOS.temp'), 'w') as fp:
+        json.dump(EXPERIMENTOS, fp, indent=4)
+    
+    with open(os.path.join(folder,'FOLDERS.temp'), 'w') as fp:
+        fp.write('\n'.join(FOLDERS))
+#--------------------------------------------------------------------
 
 base_folder = folder
 
