@@ -28,7 +28,7 @@ for i=1:Repes,
 
     if (dbi(1)),
         
-        [X_train, Y_train] = arffRead('data/madelon.trn.arff');
+        [X_train, Y_train] = arffRead('../../data/madelon.trn.arff');
     
         idx = randperm(length(Y_train));
         X_train = X_train(idx,:);
@@ -51,7 +51,7 @@ for i=1:Repes,
         
     if (dbi(2)),
         
-        [X_train, Y_train] = arffRead('data/leukemia_train_38x7129.arff');
+        [X_train, Y_train] = arffRead('../../data/leukemia_train_38x7129.arff');
     
         idx = randperm(length(Y_train));
         X_train = X_train(idx,:);
@@ -74,7 +74,7 @@ for i=1:Repes,
 
     if (dbi(3)),
         
-        [X_train, Y_train] = arffRead('data/GCM_Training.arff');
+        [X_train, Y_train] = arffRead('../../data/GCM_Training.arff');
     
         idx = randperm(length(Y_train));
         X_train = X_train(idx,:);
@@ -97,7 +97,7 @@ for i=1:Repes,
 
     if (dbi(4)),
         
-        [X_train, Y_train] = arffRead('data/Gisette/gisette_train.arff');
+        [X_train, Y_train] = arffRead('../../data/Gisette/gisette_train.arff');
 
         idx = randperm(length(Y_train));
         X_train = X_train(idx,:);
