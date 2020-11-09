@@ -1,0 +1,50 @@
+[
+ {"INDIVIDUO": 1,
+  "NUMERO_COEFICIENTES_SELECCIONADOS": 2,
+  "FEATURES": [3750, 6676],
+  "CLASIFICADORES": {
+                         "DecisionTree":
+                         {
+                              "CONFUSION_MATRIX": [[18, 2],
+                                                   [8, 6]],
+                              "UAR": 0.664286,
+                              "ELAPSED_TIME": 8.4e-05
+                         },
+                         "RandomForest":
+                         {
+                              "CONFUSION_MATRIX": [[16, 4],
+                                                   [10, 4]],
+                              "UAR": 0.542857,
+                              "ELAPSED_TIME": 0.008407
+                         },
+                         "AdaBoost":
+                         {
+                              "CONFUSION_MATRIX": [[0, 20],
+                                                   [0, 14]],
+                              "UAR": 0.5,
+                              "ELAPSED_TIME": 0.052834
+                         },
+                         "SVM":
+                         {
+                              "CONFUSION_MATRIX": [[20, 0],
+                                                   [14, 0]],
+                              "UAR": 0.5,
+                              "ELAPSED_TIME": 0.0001
+                         },
+                         "MLP":
+                         {
+                              "CONFUSION_MATRIX": [[20, 0],
+                                                   [14, 0]],
+                              "UAR": 0.5,
+                              "ELAPSED_TIME": 0.000696
+                         },
+                         "NaiveBayes":
+                         {
+                              "CONFUSION_MATRIX": [[19, 1],
+                                                   [12, 2]],
+                              "UAR": 0.546429,
+                              "ELAPSED_TIME": 3.1e-05
+                         }
+                    }
+ }
+]

@@ -1,0 +1,2 @@
+FS_Method,DecisionTree,RandomForest,AdaBoost,SVM,NaiveBayes
+relieff,0.930606,0.952035,0.882442,0.449905,0.85365

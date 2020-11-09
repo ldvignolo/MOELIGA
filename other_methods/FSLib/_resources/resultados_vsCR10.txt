@@ -1,0 +1,52 @@
+ 
+                   cfs     llcfs     fisher    laplacian    ELIGA-CR10
+madelon           0.5150   0.5417    0.5550     0.5533         0.61
+Leukemia          0.5000   0.6893    0.5000     0.5000         0.62
+GCM               0.3750   0.4286    0.4167     0.3929         0.42
+
+
+
+
+-----------------------------------------------------------------
+
+
+ 
+madelon - cfs
+UAR: 0.5150
+ 
+madelon - llcfs
+UAR: 0.5417
+ 
+madelon - fisher
+UAR: 0.5550
+ 
+madelon - laplacian
+UAR: 0.5533
+
+
+ 
+leukemia - cfs
+UAR: 0.5000
+ 
+leukemia - llcfs
+UAR: 0.6893
+ 
+leukemia - fisher
+UAR: 0.5000
+ 
+leukemia - laplacian
+UAR: 0.5000
+ 
+ 
+GCM - cfs
+UAR: 0.3750
+ 
+GCM - llcfs
+UAR: 0.4286
+ 
+GCM - fisher
+UAR: 0.4167
+ 
+GCM - laplacian
+UAR: 0.3929
+

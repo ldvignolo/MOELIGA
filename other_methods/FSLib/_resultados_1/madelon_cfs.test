@@ -1,0 +1,43 @@
+[
+ {"INDIVIDUO": 1,
+  "NUMERO_COEFICIENTES_SELECCIONADOS": 19,
+  "FEATURES": [145, 152, 21, 264, 89, 294, 19, 50, 238, 254, 257, 250, 229, 423, 370, 493, 388, 14, 440],
+  "CLASIFICADORES": {
+                         "DecisionTree":
+                         {
+                              "CONFUSION_MATRIX": [[156, 144],
+                                                   [155, 145]],
+                              "UAR": 0.501667,
+                              "ELAPSED_TIME": 0.034845
+                         },
+                         "RandomForest":
+                         {
+                              "CONFUSION_MATRIX": [[163, 137],
+                                                   [176, 124]],
+                              "UAR": 0.478333,
+                              "ELAPSED_TIME": 1.95755
+                         },
+                         "AdaBoost":
+                         {
+                              "CONFUSION_MATRIX": [[143, 157],
+                                                   [145, 155]],
+                              "UAR": 0.496667,
+                              "ELAPSED_TIME": 0.500828
+                         },
+                         "SVM":
+                         {
+                              "CONFUSION_MATRIX": [[278, 22],
+                                                   [283, 17]],
+                              "UAR": 0.491667,
+                              "ELAPSED_TIME": 0.000273
+                         },
+                         "NaiveBayes":
+                         {
+                              "CONFUSION_MATRIX": [[158, 142],
+                                                   [156, 144]],
+                              "UAR": 0.503333,
+                              "ELAPSED_TIME": 0.001629
+                         }
+                    }
+ }
+]

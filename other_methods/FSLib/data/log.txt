@@ -1,0 +1,4 @@
+perl particionar.pl GCM_Training.arff -ptrain 50 -trnfile GCM_Training_TRN2.arff -tstfile GCM_Training_TST2.arff -upsample 1 
+
+perl particionar.pl madelon.trn.arff -ptrain 70 -trnfile madelon.trn.trn.arff -tstfile madelon.trn.vld.arff -upsample 1 
+

@@ -23,9 +23,13 @@
   
   #MAXIMOS_POR_OBJETIVO: None  # SQUEEZING POR GENERACION
   
-  #MEDIDA_PARA_ELEGIR_EL_MEJOR_R1: max  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
+  MEDIDA_PARA_ELEGIR_EL_MEJOR_R1: None  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
   
-  #MEDIDA_PARA_ELEGIR_EL_MEJOR_R2: max  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
+  MEDIDA_PARA_ELEGIR_EL_MEJOR_R2: None  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
+  
+  R1_OBJETIVOS: None  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
+  
+  R2_OBJETIVOS: None  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
   
   #NUMERO_DE_VECES_QUE_SE_ELIGE_CADA_FEATURE: None  #, 'mean', 'median', 'max', 'min', 'std', 'mad']
   

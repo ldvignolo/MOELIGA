@@ -14,7 +14,7 @@ from scipy.stats import mode as mode
 import inspect
 
 import pandas as pd
-
+from tqdm import tqdm
 import io
 
 
@@ -161,17 +161,16 @@ def procesar_replicas(root_path, lib_path):
     #-----------------------------------
     # EXTRAIGO PATHS DE LAS REPLICAS
     #-----------------------------------
-    for path in paths_to_subfolders:
+    for path in tqdm(paths_to_subfolders):
         
         filename = glob.glob(os.path.join(path,'experiment_summary.json'))  # Devuelve una lista
         
         if filename:
             
-            path,_ = os.path.split(path)
-            
+            #path,_ = os.path.split(path)
             if (path not in paths):
                 paths.append(path)
-        
+    
     
     #-----------------------------------
     # PROCESO REPLICAS
@@ -182,7 +181,7 @@ def procesar_replicas(root_path, lib_path):
         
         mr = MULTIPLE_RUNS(path, lib_path=lib_path)
         
-        mr.build_report()
+        mr.build_report(show=False, save=True)
         
         mr.plot_report()
         
@@ -410,8 +409,6 @@ class MULTIPLE_RUNS(object):
                 data = json.load(fp)
             
             
-            
-            
             #==========================
             # ALMACENO DATOS TRAIN
             #==========================
@@ -496,7 +493,7 @@ class MULTIPLE_RUNS(object):
         # DATA
         #-----------------
         l1 = ax.plot(measure['G'], measure['mean'],'-r', linewidth=2)
-        l2 = ax.plot(measure['G'], measure['median'],':g', linewidth=2)
+        l2 = ax.plot(measure['G'], measure['median'],'-b', linewidth=1, alpha=0.5)
         
         ax.fill_between(measure['G'],
                         measure['max'],
@@ -541,25 +538,52 @@ class MULTIPLE_RUNS(object):
         
         for idx, measure_name in enumerate(measures):
             
-            data = np.array(self.train[measure_name])
+            data = []
             
-            measure = {'mean':[], 'median':[], 'max':[], 'min':[], 'G': None}
+            transform = False
+            for i,rep in enumerate(self.train[measure_name]):
+                
+                if isinstance(rep[0], list):
+                    
+                #-----------------------------
+                    for j,d in enumerate(rep):
+                        if (i == 0):
+                            data.append(d)
+                        else:
+                            data[j].extend(d)
+                    
+                #-----------------------------
+                else:
+                    data.append(rep)
+                    transform = True
+                    
+                #-----------------------------
             
-            #-------------------------------------------------------------
-            if (data.ndim > 2):
-                data = np.concatenate(data, axis=1)
-                data = data.T
-            #-------------------------------------------------------------
+            if transform:
+                data = np.array(data)
+                data = data.T.tolist()
             
-            data = data.astype(np.float64)  # Llegan datos '1e-5' y son tomados como "str"
+            measure = {'mean': np.zeros(len(data)),
+                       'median': np.zeros(len(data)),
+                       'max': np.zeros(len(data)),
+                       'min': np.zeros(len(data)),
+                       'G': None}
             
-            measure['mean'] = np.mean(data, axis=0)
-            measure['median'] = np.median(data, axis=0)
-            measure['max'] = np.max(data, axis=0)
-            measure['min'] = np.min(data, axis=0)
-            measure['G'] = np.arange(data.shape[1])
+            for i,d in enumerate(data):
+                
+                d = np.array(d).astype(np.float64)
+                
+                measure['mean'][i] = np.mean(d)
+                measure['median'][i] = np.median(d)
+                measure['max'][i] = np.max(d)
+                measure['min'][i] = np.min(d)
             
-            self.plot_measure_evolution(measure, measure_name=measure_name, ax=ax[idx], show=False, save=False)
+            measure['G'] = np.arange(len(data))
+            
+            if (N > 1):
+                self.plot_measure_evolution(measure, measure_name=measure_name, ax=ax[idx], show=False, save=False)
+            else:
+                self.plot_measure_evolution(measure, measure_name=measure_name, ax=ax, show=False, save=False)
             
         
         #--------------------------------------------------------------------
@@ -634,10 +658,68 @@ class MULTIPLE_RUNS(object):
     #====================================================
     
     
+    #====================================================
+    def plot_objectives_by_criterium(self, criterium=['R1', 'R2'], show=True, save=False):
+        '''
+        Esta función grafica los objetivos del fitness para los "criterios" especificados.
+        El gráfico se construye para seguir la evolución del fitness de los individuos
+        del frente de pareto, de acuerdo al criterio elegido.
+        '''
+        
+        _KEYS = [key for key in self.train.keys() if ('_OBJETIVOS' in key)]  # Claves guardadas en "train"
+        
+        KEYS = []
+        for criterio in criterium:
+            
+            key = criterio + '_OBJETIVOS'
+            
+            if key in _KEYS:
+                
+                KEYS.append(key)
+        
+        #--------------------------------------------------------------------
+        X = np.array(self.train[KEYS[0]], dtype=np.float)
+        
+        N = X.shape[-1]
+        
+        fig, ax = plt.subplots(N, len(KEYS), figsize=(5*len(KEYS), 2*N))
+        #--------------------------------------------------------------------
+        
+        for i,key in enumerate(KEYS):
+            
+            X = np.array(self.train[key], dtype=np.float)
+            
+            for j in range(X.shape[-1]):
+                
+                MEASURE = dict()
+                
+                MEASURE['mean'] = np.mean(X[:,:,j], axis=0)
+                MEASURE['median'] = np.median(X[:,:,j], axis=0)
+                MEASURE['max'] = np.max(X[:,:,j], axis=0)
+                MEASURE['min'] = np.min(X[:,:,j], axis=0)
+                
+                MEASURE['G'] = np.arange(X.shape[1])
+                
+                measure_name = 'OBJETIVO {} [{}]'.format(j,key.replace('_OBJETIVOS',''))
+                
+                self.plot_measure_evolution(MEASURE, measure_name=measure_name, ax=ax[j,i], show=False, save=False)
+        
+        
+        plt.tight_layout()
+        
+        
+        if save:
+            plt.savefig(os.path.join(self.path,'evolution_of_several_measures_for_pareto.pdf'), dpi=300)
+            plt.savefig(os.path.join(self.path,'evolution_of_several_measures_for_pareto.png'), dpi=300)
+        
+        if show:
+            plt.show()
     
+        
+        plt.close(fig)  # NO OLVIDAR ESTO PARA QUE NO QUEDE CARGADA EN MEMORIA!!!
+                        # https://heitorpb.github.io/bla/2020/03/18/close-matplotlib-figures/
     
-    
-    
+    #====================================================
     
     
     #@@@@@@@@@@@@@@@@@@@@@@@
@@ -780,7 +862,7 @@ class MULTIPLE_RUNS(object):
         #----------------------------------------
         # CONSTRUYO TABLA PARA REPORTE FINAL
         #----------------------------------------
-        self.build_report(show=False, save=True)
+        #self.build_report(show=False, save=True)
         
         
         #----------------------------------------
@@ -797,13 +879,14 @@ class MULTIPLE_RUNS(object):
                     'OBJETIVO_1',
                     'OBJETIVO_2',
                     'DISTANCIAS_MEDIAS',
-                    #'MEDIDA_PARA_ELEGIR_EL_MEJOR_R1',
-                    #'MEDIDA_PARA_ELEGIR_EL_MEJOR_R2',
+                    'MEDIDA_PARA_ELEGIR_EL_MEJOR_R1',
+                    'MEDIDA_PARA_ELEGIR_EL_MEJOR_R2',
                     'CANTIDAD_DE_MUTACIONES',
                     'CANTIDAD_DE_CLUSTERS']
         
         self.plot_summary_train(measures=MEASURES, show=False, save=True)
         
+        self.plot_objectives_by_criterium(criterium=['R1', 'R2'])
         
         ###############################################
         # TEST - PLOT EVOLUTION OF SEVERAL MEASURES
