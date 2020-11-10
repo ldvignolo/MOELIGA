@@ -49,7 +49,7 @@ def serialize_json(json_object):
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-def procesar_experimento(info):
+def procesar_experimento(info):  #, avoid_processed_files=True):
     
     path, lib_path = info
     
@@ -57,18 +57,19 @@ def procesar_experimento(info):
         
     if filename:
         
-        #n += 1
+        _path, filename = os.path.split(filename[0])
         
-        #print('\n[{}/{}] Procesando {}...'.format(n, N, path))
-        print('\nProcesando {}...'.format(path))
-        
-        se = SINGLE_EXPERIMENT(filename[0], lib_path=lib_path)
-        
-        se.build_summary()
-        
-        # GUARDAR OBJETO CON PICKLE O DILL??
-        
-        del se
+        if not os.path.isfile(os.path.join(_path, 'experiment_summary.json')):  # and not avoid_processed_files:
+            
+            print('\nProcesando {}...'.format(path))
+            
+            se = SINGLE_EXPERIMENT(os.path.join(_path, filename), lib_path=lib_path)
+            
+            se.build_summary()
+            
+            # GUARDAR OBJETO CON PICKLE O DILL??
+            
+            del se
         
         #print('Done!!\n')
 
@@ -1080,32 +1081,39 @@ class SINGLE_EXPERIMENT(object):
             
             
             else:
-                values = self.apply_statistic(self.general[key],
-                                              statistic=None,
-                                              squeezy_criterium=squeezy_criterium
-                                             )
                 
-                if isinstance(values, np.ndarray):
-                    SUMMARY['TRAIN'][key] = values.tolist()
+                if key in (self.general.keys()):
                 
-                elif isinstance(values, list):
-                    #SUMMARY['TRAIN'][key] = values[:]
-                    if isinstance(values[0], np.ndarray):
-                        SUMMARY['TRAIN'][key] = [array.tolist() for array in values]
+                    values = self.apply_statistic(self.general[key],
+                                                statistic=None,
+                                                squeezy_criterium=squeezy_criterium
+                                                )
+                    
+                    if isinstance(values, np.ndarray):
+                        SUMMARY['TRAIN'][key] = values.tolist()
+                    
+                    elif isinstance(values, list):
+                        #SUMMARY['TRAIN'][key] = values[:]
+                        if isinstance(values[0], np.ndarray):
+                            SUMMARY['TRAIN'][key] = [array.tolist() for array in values]
+                        else:
+                            SUMMARY['TRAIN'][key] = values[:]
+                    
+                    elif isinstance(values, np.int64):
+                        SUMMARY['TRAIN'][key] = int(values)
+                    
+                    elif isinstance(values, np.float64):
+                        SUMMARY['TRAIN'][key] = float(values)
+                    
+                    elif isinstance(values, int) or isinstance(values, float):
+                        SUMMARY['TRAIN'][key] = values
+                    
                     else:
-                        SUMMARY['TRAIN'][key] = values[:]
+                        print('No se puede guardar el valor para {} [Type: {}]'.format(key, type(values)))
                 
-                elif isinstance(values, np.int64):
-                    SUMMARY['TRAIN'][key] = int(values)
-                
-                elif isinstance(values, np.float64):
-                    SUMMARY['TRAIN'][key] = float(values)
-                
-                elif isinstance(values, int) or isinstance(values, float):
-                    SUMMARY['TRAIN'][key] = values
                 
                 else:
-                    print('No se puede guardar el valor para {} [Type: {}]'.format(key, type(values)))
+                    SUMMARY['TRAIN'][key] = []  # Util para cuando tengo sólo 2 objetivos
                 
             
             #print(key, SUMMARY['TRAIN'][key])
