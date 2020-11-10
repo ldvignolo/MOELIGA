@@ -8,42 +8,42 @@
                               "CONFUSION_MATRIX": [[18, 2],
                                                    [1, 13]],
                               "UAR": 0.914286,
-                              "ELAPSED_TIME": 0.000257
+                              "ELAPSED_TIME": 0.000289
                          },
                          "RandomForest":
                          {
                               "CONFUSION_MATRIX": [[20, 0],
                                                    [4, 10]],
                               "UAR": 0.857143,
-                              "ELAPSED_TIME": 0.010699
+                              "ELAPSED_TIME": 0.012752
                          },
                          "AdaBoost":
                          {
                               "CONFUSION_MATRIX": [[17, 3],
                                                    [0, 14]],
                               "UAR": 0.925,
-                              "ELAPSED_TIME": 0.003178
+                              "ELAPSED_TIME": 0.000204
                          },
                          "SVM":
                          {
                               "CONFUSION_MATRIX": [[2, 18],
                                                    [4, 10]],
                               "UAR": 0.407143,
-                              "ELAPSED_TIME": 0.000114
+                              "ELAPSED_TIME": 0.000575
                          },
                          "MLP":
                          {
                               "CONFUSION_MATRIX": [[19, 1],
                                                    [4, 10]],
                               "UAR": 0.832143,
-                              "ELAPSED_TIME": 0.166654
+                              "ELAPSED_TIME": 0.166949
                          },
                          "NaiveBayes":
                          {
                               "CONFUSION_MATRIX": [[15, 5],
                                                    [0, 14]],
                               "UAR": 0.875,
-                              "ELAPSED_TIME": 0.006799
+                              "ELAPSED_TIME": 0.005473
                          }
                     }
  }

@@ -8,21 +8,21 @@
                               "CONFUSION_MATRIX": [[9, 11],
                                                    [10, 4]],
                               "UAR": 0.367857,
-                              "ELAPSED_TIME": 0.000381
+                              "ELAPSED_TIME": 0.000389
                          },
                          "RandomForest":
                          {
-                              "CONFUSION_MATRIX": [[15, 5],
-                                                   [12, 2]],
-                              "UAR": 0.446429,
-                              "ELAPSED_TIME": 0.019128
+                              "CONFUSION_MATRIX": [[19, 1],
+                                                   [14, 0]],
+                              "UAR": 0.475,
+                              "ELAPSED_TIME": 0.022842
                          },
                          "AdaBoost":
                          {
                               "CONFUSION_MATRIX": [[18, 2],
                                                    [11, 3]],
                               "UAR": 0.557143,
-                              "ELAPSED_TIME": 0.000284
+                              "ELAPSED_TIME": 0.000306
                          },
                          "SVM":
                          {
@@ -36,14 +36,14 @@
                               "CONFUSION_MATRIX": [[18, 2],
                                                    [11, 3]],
                               "UAR": 0.557143,
-                              "ELAPSED_TIME": 0.47532
+                              "ELAPSED_TIME": 0.502661
                          },
                          "NaiveBayes":
                          {
                               "CONFUSION_MATRIX": [[17, 3],
                                                    [9, 5]],
                               "UAR": 0.603571,
-                              "ELAPSED_TIME": 0.005546
+                              "ELAPSED_TIME": 0.005985
                          }
                     }
  }

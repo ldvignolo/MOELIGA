@@ -456,7 +456,7 @@ file2 = path+'/data/leukemia_test_34x7129.arff'
 #batchRelief(file1, file2, 131, nb=_nb)
 tmpres = batchRelief2(file1, 131, nb=_nb, mpath=path, dataset=dtset)
 sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
-writer.save()
+
 
 dtset = 'gcm'
 file1 = path+'/data/GCM_Training.arff'
@@ -464,7 +464,7 @@ file2 = path+'/data/GCM_Test.arff'
 #batchRelief(file1, file2, 587, nb=_nb)
 tmpres = batchRelief2(file1, 587, nb=_nb, mpath=path, dataset=dtset)
 sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
-writer.save()
+
 
 dtset = 'madelon'
 file1 = path+'/data/madelon.trn.arff'
@@ -472,7 +472,7 @@ file2 = path+'/data/madelon.tst.arff'
 #batchRelief(file1, file2, 61, nb=_nb)
 tmpres = batchRelief2(file1, 61, nb=_nb, mpath=path, dataset=dtset)
 sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
-writer.save()
+
 
 dtset = 'gisette'
 file1 = path+'/data/Gisette/gisette_train.arff'
@@ -480,7 +480,7 @@ file2 = path+'/data/Gisette/gisette_test.arff'
 #batchRelief(file1, file2, 50, nb=_nb)
 #tmpres = batchRelief2(file1, 50, nb=_nb, mpath=path, dataset=dtset)
 #sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
-#writer.save()
+writer.save()
 
 
 
