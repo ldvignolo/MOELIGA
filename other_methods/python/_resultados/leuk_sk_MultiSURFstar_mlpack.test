@@ -8,21 +8,21 @@
                               "CONFUSION_MATRIX": [[18, 2],
                                                    [7, 7]],
                               "UAR": 0.7,
-                              "ELAPSED_TIME": 0.000388
+                              "ELAPSED_TIME": 0.000369
                          },
                          "RandomForest":
                          {
                               "CONFUSION_MATRIX": [[20, 0],
-                                                   [9, 5]],
-                              "UAR": 0.678571,
-                              "ELAPSED_TIME": 0.019539
+                                                   [10, 4]],
+                              "UAR": 0.642857,
+                              "ELAPSED_TIME": 0.017998
                          },
                          "AdaBoost":
                          {
                               "CONFUSION_MATRIX": [[16, 4],
                                                    [6, 8]],
                               "UAR": 0.685714,
-                              "ELAPSED_TIME": 0.000349
+                              "ELAPSED_TIME": 0.002509
                          },
                          "SVM":
                          {
@@ -36,14 +36,14 @@
                               "CONFUSION_MATRIX": [[18, 2],
                                                    [7, 7]],
                               "UAR": 0.7,
-                              "ELAPSED_TIME": 0.452403
+                              "ELAPSED_TIME": 0.488631
                          },
                          "NaiveBayes":
                          {
                               "CONFUSION_MATRIX": [[16, 4],
                                                    [1, 13]],
                               "UAR": 0.864286,
-                              "ELAPSED_TIME": 0.007062
+                              "ELAPSED_TIME": 0.005915
                          }
                     }
  }

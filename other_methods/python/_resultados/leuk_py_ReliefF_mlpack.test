@@ -8,42 +8,42 @@
                               "CONFUSION_MATRIX": [[9, 11],
                                                    [10, 4]],
                               "UAR": 0.367857,
-                              "ELAPSED_TIME": 0.000572
+                              "ELAPSED_TIME": 0.000381
                          },
                          "RandomForest":
                          {
-                              "CONFUSION_MATRIX": [[18, 2],
-                                                   [13, 1]],
-                              "UAR": 0.485714,
-                              "ELAPSED_TIME": 0.042244
+                              "CONFUSION_MATRIX": [[15, 5],
+                                                   [12, 2]],
+                              "UAR": 0.446429,
+                              "ELAPSED_TIME": 0.019128
                          },
                          "AdaBoost":
                          {
                               "CONFUSION_MATRIX": [[18, 2],
                                                    [11, 3]],
                               "UAR": 0.557143,
-                              "ELAPSED_TIME": 0.001315
+                              "ELAPSED_TIME": 0.000284
                          },
                          "SVM":
                          {
                               "CONFUSION_MATRIX": [[14, 6],
                                                    [5, 9]],
                               "UAR": 0.671429,
-                              "ELAPSED_TIME": 0.000235
+                              "ELAPSED_TIME": 0.000113
                          },
                          "MLP":
                          {
                               "CONFUSION_MATRIX": [[18, 2],
                                                    [11, 3]],
                               "UAR": 0.557143,
-                              "ELAPSED_TIME": 0.515265
+                              "ELAPSED_TIME": 0.47532
                          },
                          "NaiveBayes":
                          {
                               "CONFUSION_MATRIX": [[17, 3],
                                                    [9, 5]],
                               "UAR": 0.603571,
-                              "ELAPSED_TIME": 0.00689
+                              "ELAPSED_TIME": 0.005546
                          }
                     }
  }

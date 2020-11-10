@@ -194,15 +194,16 @@ def batchRelief(file1, file2, nf, encodeLabels=True, nb=20):
 
 def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='None'):
     
-    print('\n < '+dataset+' >\n')
+    print('\n < '+dataset+' >')
 
     testbin  = 'bin/test'
     confpath = 'settings/'
     prevpath=os.getcwd()
     results = {}
     
-    os.mkdir(prevpath + '/_resultados/');
-    
+    if not os.path.exists(prevpath + '/_resultados/'):
+        os.makedirs(prevpath + '/_resultados/')
+  
     trnData, trnLabels, header = loadDataset(file1, encodeLabels)
     trnData = estandarizar(trnData)    
 
@@ -477,9 +478,9 @@ dtset = 'gisette'
 file1 = path+'/data/Gisette/gisette_train.arff'
 file2 = path+'/data/Gisette/gisette_test.arff'
 #batchRelief(file1, file2, 50, nb=_nb)
-tmpres = batchRelief2(file1, 50, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
-writer.save()
+#tmpres = batchRelief2(file1, 50, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#writer.save()
 
 
 
