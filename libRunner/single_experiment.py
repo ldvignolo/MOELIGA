@@ -85,6 +85,9 @@ def procesar_experimentos(root_path, lib_path, n_jobs=2):
     
     '''
     
+    if not isinstance(n_jobs, int):
+        n_jobs = int(n_jobs)
+    
     paths_to_subfolders = [x[0] for x in os.walk('{}'.format(root_path))]
     
     #------------------------------------------------------
