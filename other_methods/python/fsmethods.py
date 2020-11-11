@@ -133,7 +133,7 @@ def parseArff(infile):
     return data, labels, header
 
 
-def loadJSON(jfile,tiempo):
+def loadJSON(jfile,tiempo,nf,nb):
     
     with open(jfile) as json_file:
         data = json.load(json_file)
@@ -143,6 +143,8 @@ def loadJSON(jfile,tiempo):
             uar = data[0]['CLASIFICADORES'][classifier]['UAR']                   
             mydict.update({classifier:uar})
     mydict.update({'Elapsed Time':tiempo})        
+    mydict.update({'No. of Features':nf})
+    mydict.update({'No. of Neighbors':nb})
     return mydict
 
 
@@ -237,7 +239,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     os.chdir(mpath)
     os.system(cmd)
     os.chdir(prevpath)
-    tmpdict = loadJSON(jsonfile,etime)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
     results.update({fsmethod:tmpdict})
     
     # # #
@@ -266,7 +268,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     os.chdir(mpath)
     os.system(cmd)
     os.chdir(prevpath)
-    tmpdict = loadJSON(jsonfile,etime)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
     results.update({fsmethod:tmpdict})
     
     # # #
@@ -295,7 +297,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     os.chdir(mpath)
     os.system(cmd)
     os.chdir(prevpath)
-    tmpdict = loadJSON(jsonfile,etime)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
     results.update({fsmethod:tmpdict})
     
     # # #
@@ -324,7 +326,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     os.chdir(mpath)
     os.system(cmd)
     os.chdir(prevpath)
-    tmpdict = loadJSON(jsonfile,etime)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
     results.update({fsmethod:tmpdict})
     
     # # #
@@ -353,7 +355,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     os.chdir(mpath)
     os.system(cmd)
     os.chdir(prevpath)
-    tmpdict = loadJSON(jsonfile,etime)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
     results.update({fsmethod:tmpdict})
     
     # # #
@@ -382,7 +384,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     #os.chdir(mpath)
     #os.system(cmd)
     #os.chdir(prevpath)
-    #tmpdict = loadJSON(jsonfile,etime)
+    #tmpdict = loadJSON(jsonfile,etime,nf,nb)
     #results.update({fsmethod:tmpdict})
     
     # # #
@@ -411,7 +413,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     os.chdir(mpath)
     os.system(cmd)
     os.chdir(prevpath)
-    tmpdict = loadJSON(jsonfile,etime)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
     results.update({fsmethod:tmpdict})
     
     return results
@@ -478,8 +480,9 @@ dtset = 'gisette'
 file1 = path+'/data/Gisette/gisette_train.arff'
 file2 = path+'/data/Gisette/gisette_test.arff'
 #batchRelief(file1, file2, 50, nb=_nb)
-#tmpres = batchRelief2(file1, 50, nb=_nb, mpath=path, dataset=dtset)
-#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+tmpres = batchRelief2(file1, 50, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
 writer.save()
 
 
