@@ -452,7 +452,7 @@ workbook  = writer.book
 path='../../'
 
 
-dtset = 'leuk'
+dtset = 'leukemia'
 file1 = path+'/data/leukemia_train_38x7129.arff'
 file2 = path+'/data/leukemia_test_34x7129.arff'
 #batchRelief(file1, file2, 131, nb=_nb)
@@ -476,12 +476,12 @@ tmpres = batchRelief2(file1, 61, nb=_nb, mpath=path, dataset=dtset)
 sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'gisette'
-file1 = path+'/data/Gisette/gisette_train.arff'
-file2 = path+'/data/Gisette/gisette_test.arff'
-#batchRelief(file1, file2, 50, nb=_nb)
-tmpres = batchRelief2(file1, 50, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'gisette'
+#file1 = path+'/data/Gisette/gisette_train.arff'
+#file2 = path+'/data/Gisette/gisette_test.arff'
+##batchRelief(file1, file2, 50, nb=_nb)
+#tmpres = batchRelief2(file1, 50, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 writer.save()
 
