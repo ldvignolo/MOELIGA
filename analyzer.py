@@ -34,7 +34,8 @@ print('Analizando replicas...')
 print('################################')
 
 procesar_replicas(args['experiment_path'],
-                  lib_path=args['library_path'])
+                  lib_path=args['library_path'],
+                  n_jobs=args['n_jobs'])
 
 print('Done!!\n')
 

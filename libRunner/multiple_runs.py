@@ -17,6 +17,7 @@ import pandas as pd
 from tqdm import tqdm
 import io
 
+from multiprocessing import Pool
 
 #===============================================
 def check_type(values):
@@ -143,16 +144,39 @@ def apply_statistic(values, statistic=None, squeezy_criterium='mean'):
 
 
 
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+def procesar_replica(info):
+    '''
+    PROCESO REPLICAS
+    '''
+    
+    path, lib_path = info
+    
+    print('\n[{}/{}] Procesando {}...'.format(n+1, len(paths), path))
+    
+    mr = MULTIPLE_RUNS(path, lib_path=lib_path)
+    
+    mr.build_report(show=False, save=True)
+    
+    mr.plot_report()
+    
+    del mr
+    
+    print('Done!!\n')
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-def procesar_replicas(root_path, lib_path):
+def procesar_replicas(root_path, lib_path, n_jobs=2):
     '''
     Esta funcion recorre todas las carpetas desde el root del experimento
     completo y procesa cada corrida generando las gráficas y el summary de
     cada experimento ("experiment_summart.json").
     
     '''
+    
+    if not isinstance(n_jobs, int):
+        n_jobs = int(n_jobs)
     
     paths_to_subfolders = [x[0] for x in os.walk('{}'.format(root_path))]
     
@@ -167,27 +191,31 @@ def procesar_replicas(root_path, lib_path):
         
         if filename:
             
-            #path,_ = os.path.split(path)
+            path,_ = os.path.split(path)
             if (path not in paths):
                 paths.append(path)
     
     
-    #-----------------------------------
-    # PROCESO REPLICAS
-    #-----------------------------------
-    for n,path in enumerate(paths):
+    
+    with Pool(n_jobs) as p:
+        p.map(procesar_replica, zip(paths,[lib_path]*len(paths)))
+    
+    ##-----------------------------------
+    ## PROCESO REPLICAS
+    ##-----------------------------------
+    #for n,path in enumerate(paths):
         
-        print('\n[{}/{}] Procesando {}...'.format(n+1, len(paths), path))
+        #print('\n[{}/{}] Procesando {}...'.format(n+1, len(paths), path))
         
-        mr = MULTIPLE_RUNS(path, lib_path=lib_path)
+        #mr = MULTIPLE_RUNS(path, lib_path=lib_path)
         
-        mr.build_report(show=False, save=True)
+        #mr.build_report(show=False, save=True)
         
-        mr.plot_report()
+        #mr.plot_report()
         
-        del mr
+        #del mr
         
-        print('Done!!\n')
+        #print('Done!!\n')
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
@@ -541,9 +569,10 @@ class MULTIPLE_RUNS(object):
             data = []
             
             transform = False
-            for i,rep in enumerate(self.train[measure_name]):
+            for i,rep in enumerate(self.train[measure_name]):  # rep no está vacío
+                                                               # y es una lista
                 
-                if isinstance(rep[0], list):
+                if (rep) and isinstance(rep[0], list):
                     
                 #-----------------------------
                     for j,d in enumerate(rep):
