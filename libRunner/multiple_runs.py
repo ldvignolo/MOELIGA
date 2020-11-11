@@ -915,7 +915,7 @@ class MULTIPLE_RUNS(object):
         
         self.plot_summary_train(measures=MEASURES, show=False, save=True)
         
-        self.plot_objectives_by_criterium(criterium=['R1', 'R2'])
+        self.plot_objectives_by_criterium(criterium=['R1', 'R2'], show=False, save=True)
         
         ###############################################
         # TEST - PLOT EVOLUTION OF SEVERAL MEASURES
