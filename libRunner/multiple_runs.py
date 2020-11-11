@@ -152,7 +152,7 @@ def procesar_replica(info):
     
     path, lib_path = info
     
-    print('\n[{}/{}] Procesando {}...'.format(len(paths), path))
+    print('\n Procesando ', path, '...' ))
     
     mr = MULTIPLE_RUNS(path, lib_path=lib_path)
     
