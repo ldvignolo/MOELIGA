@@ -67,4 +67,3 @@ print('--------------------------------\n\n')
 if (args['notification']):
     import notification
     notification.notify("La instancia de analyzer " + args['experiment_path'] + " ha finalizado.")
-

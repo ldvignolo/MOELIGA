@@ -1,152 +1,187 @@
-import sys
 import os
-import glob
-import numpy as np
-import pandas as pd
+import sys
 import yaml
+import pandas as pd
+import itertools
 
-# pip install XlsxWriter
-import xlsxwriter # no es necesario importarlo, pero lo hago para que si no esta salte el error al inicio y no despues
+from tqdm import tqdm
 
-
-#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-def procesar_df(parameters, df_name, RESULTADOS):
-    '''
-    
-    '''
-    
-    update_results = False
-    if RESULTADOS:
-        update_results = True
-        
-    
-    
-    with open(df_name, 'r') as fp:
-        lines = fp.read()
-        lines = lines.strip().split('\n')
-    
-    
-    data = []
-    analyzed_parameters = []
-    values = []
-    
-    # SPLITTING DATA
-    flag = False
-    for line in lines:
-        
-        if(line[0] != ','):
-            flag = True  # EMPIEZA LA SECCION DE DATOS
-        
-        if flag:
-            data.append(line.strip())
-        
-        else:
-            k,v = line.strip().strip(',').split('=')
-            analyzed_parameters.append(k)
-            values.append(v)
-    
-    
-    
-    
-    # CABECERA
-    for idx,parameter in enumerate(parameters):
-        
-        if (len(RESULTADOS) < idx+1):
-            RESULTADOS.append('')
-            
-        if (parameter not in analyzed_parameters):
-            analyzed_parameters.insert(idx,'')
-            values.insert(idx,'')
-            RESULTADOS[idx] += ',{}=None'.format(parameter)
-        
-        else:
-            RESULTADOS[idx] += ',{}={}'.format(analyzed_parameters[idx],values[idx])
-    
-    
-    # DATOS
-    for i,d in enumerate(data):
-        
-        if (len(RESULTADOS) < idx+i+2):
-            RESULTADOS.append('')
-        
-        if update_results:
-            _,d = d.split(',')
-            RESULTADOS[i+idx+1] += d + ','
-        else:
-            RESULTADOS[i+idx+1] += d + ','
-    
-    return RESULTADOS
-#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
-
-
-
-
-
-
+#root_path = '../GCM'
+#runner_settings = '../runner_settings.yaml'
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 def construir_reporte(root_path, runner_settings):
-    '''
-    Esta funcion recorre todas las carpetas desde el root del experimento
-    completo y procesa cada corrida generando las gráficas y el summary de
-    cada experimento ("experiment_summart.json").
     
-    '''
+    print('\n{}\n\n'.format('='*30))
     
-    #-------------------------------------------
-    with open(runner_settings, 'r') as fp:
-        if (sys.version_info.major < 3) or (sys.version_info.minor < 6):
-            settings = yaml.load(fp)  # 2.7 and < 3.6
+    EXPERIMENTOS = []
+    FOLDERS = []
+
+    #---------------------------------------
+    # LOAD EXPERIMENT SETTINGS FILE
+    #---------------------------------
+    with open(runner_settings, 'r') as f:
+        SETTINGS_RUNNER = yaml.load(f, Loader=yaml.FullLoader)
+
+    #---------------------------------------    
+
+    names = list(SETTINGS_RUNNER['PARAMETERS'].keys())
+
+    L = [SETTINGS_RUNNER['PARAMETERS'][name] for name in names]
+
+    experiments = list(itertools.product(*L))
+
+
+    #======================================
+    # BUILDING EXPERIMENT SEQUENCE
+    #======================================
+    print('\nConstruyendo listado de experimentos realizados...')
+    for experiment in tqdm(experiments):
         
-        else:
-            setings = yaml.load(fp, Loader=yaml.FullLoader)
-    
-    parameters = list(setings['PARAMETERS'].keys())
-    #-------------------------------------------
-    
-    
-    paths_to_subfolders = [x[0] for x in os.walk('{}'.format(root_path))]
-    
-    #-----------------------------------
-    # EXTRAIGO PATHS DE LAS REPLICAS
-    #-----------------------------------
+        folder = root_path + '/'
+        #-------------------------------------------
+
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+            
+        parameters = dict()
+
+        # FILTRO LO QUE NO SE MODIFICA POR FALSE
+        USAR = dict()
+
+        for name,value in zip(names,experiment):
+            
+            # NO CARGUE PREVIAMENTE EL VALOR
+            if name not in USAR:
+                
+                USAR[name] = True
+                
+                if (name in SETTINGS_RUNNER['DEPENDENCIAS']) and (value == False):
+                    
+                    for key in SETTINGS_RUNNER['DEPENDENCIAS'][name]:
+                        
+                        USAR[key] = False
+            
+        #---------------------------------------
+
+
+        for k,v in zip(names, experiment):
+            
+            if USAR[k]:
+                
+                folder += '{}__{}/'.format(k,v)
+                parameters[k] = v
+                
+                folder = folder.replace('True', 'true')
+                folder = folder.replace('False', 'false')
+
+
+        #########################################################
+        # EVITO REPETIR EXPERIMENTOS POR CARPETAS REPETIDAS!!
+        #########################################################
+        if folder not in FOLDERS:
+            FOLDERS.append(folder)
+            filename = os.path.join(folder, 'repetitions_summary.csv')
+            if os.path.isfile(filename):
+                EXPERIMENTOS.append(filename)
+                
+    EXPERIMENTOS = list(set(EXPERIMENTOS))
+    EXPERIMENTOS.sort()
+
+
     RESULTADOS = []
     
-    for path in paths_to_subfolders:
+    print('\nExtrayendo información de los experimentos...')
+    for path_to_file in tqdm(EXPERIMENTOS):
         
-        filename = glob.glob(os.path.join(path,'repetitions_summary.csv'))  # Devuelve una lista
+        with open(path_to_file, 'r') as fp:
+            lines = fp.read()
+            lines = lines.strip().split('\n')
         
-        if filename:
+        
+        analyzed_parameters = dict()
+        data = []
+        
+        #--------------------------
+        # SEPARO DATOS EN PARTES
+        #--------------------------
+        flag = False
+        
+        for line in lines:
             
-            print('\nProcesando {}...'.format(path))
+            if (line[0] == ','):  # CABECERA
+                k,v = line.strip().strip(',').split('=')
+                analyzed_parameters[k] = v
             
-            RESULTADOS = procesar_df(parameters, filename[0], RESULTADOS)
+            else:
+                k,v = line.strip().split(',')
+                data.append([k,v])
+                
+        #--------------------------
         
-    
+        
+        #--------------------------
+        # CABECERA
+        #--------------------------
+        CABECERA = []
+        for key in SETTINGS_RUNNER['PARAMETERS'].keys():  # claves en "SETTINGS_RUNNER['PARAMETERS']"
+            
+            if key in analyzed_parameters.keys():
+                CABECERA.append(',{}={}'.format(key, str(analyzed_parameters[key])))
+            
+            else:
+                CABECERA.append(',{}=None'.format(key, None))
+        #--------------------------
+        
+        
+        #--------------------------
+        # DATOS
+        #--------------------------
+        #CLAVES = []
+        #VALORES = []
+        #for (k,v) in data:
+            #CLAVES.append('{}'.format(k))
+            #VALORES.append('{}'.format(v))
+        #--------------------------
+        
+        if RESULTADOS:  # ACTUALIZO
+            for i,label in enumerate(CABECERA):
+                RESULTADOS[i] += '{}'.format(label)
+            
+            if not data:
+                print(path_to_file)
+            
+            for j, (k,v) in enumerate(data):
+                RESULTADOS[j+i+1] += ',{}'.format(v)
+            
+            
+        
+        else: # INICIALIZO
+            RESULTADOS.extend(CABECERA)
+            for (k,v) in data:
+                RESULTADOS.append('{},{}'.format(k,v))
+
+
+
+    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
     with open(os.path.join(root_path, 'final_report.csv'), 'w') as fp:
         
-        for i,R in enumerate(RESULTADOS):
-            
-            if (i < len(parameters)):
-                fp.write(R + '\n')
-            else:
-                fp.write(R[:-1] + '\n')
-        
-        
+        for R in RESULTADOS:
+            fp.write(R + '\n')
+
+
     df = pd.read_csv(os.path.join(root_path, 'final_report.csv'),
-                     delimiter=',',
-                     header=[i for i in range(len(parameters))],
-                     index_col=0)
-    
-    # df.to_excel(os.path.join(root_path, 'final_report.xlsx'))
-    
+                    delimiter=',',
+                    header=[i for i in range(len(parameters)+1)],
+                    index_col=0)
+
+    #df.to_excel(os.path.join(root_path, 'final_report.xlsx'))
     #---------------------------------------------------------------
-    
-    idxs = [idx for idx,label in enumerate(df.index) if 'CRITERIO' in label]
-    
+
+    idxs = [idx for idx,label in enumerate(df.index) if (not isinstance(label, float)) and ('CRITERIO' in label)]
+
     sheets = []
     for i in range(len(idxs)):
         
@@ -162,15 +197,19 @@ def construir_reporte(root_path, runner_settings):
     # Create a Pandas Excel writer using XlsxWriter as the engine.    
     writer = pd.ExcelWriter(os.path.join(root_path, 'final_report.xlsx'), engine='xlsxwriter')
     workbook  = writer.book
-    
+
     # formato1 = workbook.add_format({'align': 'left'})
     formato1 = workbook.add_format({'bold': True, 'text_wrap': True, 'align': 'left', 'fg_color': '#D7E4BC', 'border': 1, 'bg_color':'#B1B3B3'})
     #formato1 = workbook.add_format()
     #formato1.set_align('left')
     formato2 = workbook.add_format({'num_format': '#,####0.0000', 'align': 'center'})
+    
+    
+    print('\nEscribiendo reporte...')
+    for i,sheet in enumerate(sheets):
         
-    for i,sheet in enumerate(sheets):        
-       
+        print('\nHoja {}...'.format(i+1))
+        
         label = df.index[idxs[i]]
         
         sheet.to_excel(writer, sheet_name='{}'.format(label), header=True, startcol=0)
@@ -178,27 +217,24 @@ def construir_reporte(root_path, runner_settings):
         worksheet = writer.sheets[label]        
                 
         first_col_width=0
-        for idx, col in enumerate(df.index):  
-            if (len(col)>first_col_width):
+        for idx, col in enumerate(df.index):
+            if (not isinstance(col, float)) and (len(col)>first_col_width):
                 first_col_width = len(col)+4            
                 
         worksheet.set_column('A:A', first_col_width, formato1)          
 
-        for idx, col in enumerate(df):  
+        for idx, col in enumerate(df):
             col_width = len(col[-1])+2
             j=idx+1
             worksheet.set_column(j, j, col_width, formato2)      
             
-    
+        
+        print('Done!!!')
+        
     # Close the Pandas Excel writer and output the Excel file.
     writer.save()
     
-    
-    
-    
-    
-    
-    
+    print('\n{}\n\n'.format('='*30))
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
@@ -213,5 +249,6 @@ if __name__ == '__main__':
     import sys
     
     root_path = sys.argv[1]
+    runner_settings = sys.argv[2]
     
-    construir_reporte(root_path)
+    construir_reporte(root_path, runner_settings)

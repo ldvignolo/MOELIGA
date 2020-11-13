@@ -150,9 +150,13 @@ def procesar_replica(info):
     PROCESO REPLICAS
     '''
     
-    path, lib_path = info
+    path, lib_path, n, N = info
     
-    print('\n Procesando ', path, '...' )
+    if (n is not None):
+        print('\n[{}/{}] Procesando {}...'.format(n+1, N, path))
+    
+    else:
+        print('\nProcesando {}...'.format(path))
     
     mr = MULTIPLE_RUNS(path, lib_path=lib_path)
     
@@ -162,7 +166,8 @@ def procesar_replica(info):
     
     del mr
     
-    print('Done!!\n')
+    if (n is not None):
+        print('Done!!\n')
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
@@ -196,26 +201,17 @@ def procesar_replicas(root_path, lib_path, n_jobs=2):
                 paths.append(path)
     
     
+    #-----------------------------------
+    # PROCESO REPLICAS
+    #-----------------------------------
+    if (n_jobs == 1):
+        for n, path in enumerate(paths):
+            procesar_replica((path, lib_path, n, len(paths)))
     
-    with Pool(n_jobs) as p:
-        p.map(procesar_replica, zip(paths,[lib_path]*len(paths)))
+    else:
+        with Pool(n_jobs) as p:
+            p.map(procesar_replica, zip(paths,[lib_path]*len(paths), [None]*len(paths), [None]*len(paths)))
     
-    ##-----------------------------------
-    ## PROCESO REPLICAS
-    ##-----------------------------------
-    #for n,path in enumerate(paths):
-        
-        #print('\n[{}/{}] Procesando {}...'.format(n+1, len(paths), path))
-        
-        #mr = MULTIPLE_RUNS(path, lib_path=lib_path)
-        
-        #mr.build_report(show=False, save=True)
-        
-        #mr.plot_report()
-        
-        #del mr
-        
-        #print('Done!!\n')
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
