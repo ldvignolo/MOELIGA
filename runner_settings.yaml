@@ -4,7 +4,7 @@
   NSubPoblaciones: [3]
   SubPob_Replace_Type: ['reemplazo_padre']
   Obj2Sigmod: [True, False]
-  SigmLambda: [0.5, 15.0]
+  SigmLambda: [0.5, 1.5, 15.0]
   #NObjetivos: [2,3]
   #Obj2Sigmod: [True]
   NTests: [3]
