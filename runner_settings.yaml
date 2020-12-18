@@ -1,15 +1,15 @@
 ---
  PARAMETERS:
   #TasaActivacionEscalonada: [True, False]  
-  NSubPoblaciones: [0,3]
-  SubPob_Replace_Type: ['reemplazo_padre','reemplazo_seleccion']
+  NSubPoblaciones: [3]
+  SubPob_Replace_Type: ['reemplazo_padre']
   Obj2Sigmod: [True, False]
-  SigmLambda: [0.1, 0.5, 1.5, 5.0, 15.0]
+  SigmLambda: [0.5, 15.0]
   #NObjetivos: [2,3]
   #Obj2Sigmod: [True]
-  NTests: [1,3]
-  NObjetivos: [2,3]
-  SigmaShare: [0.015, 0.04, 0.08, 0.15, 0.3]
+  NTests: [3]
+  NObjetivos: [3]
+  SigmaShare: [0.005, 0.015]
   
 
  DEPENDENCIAS:
