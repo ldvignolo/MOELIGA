@@ -9,7 +9,7 @@
   #Obj2Sigmod: [True]
   NTests: [3]
   NObjetivos: [3]
-  SigmaShare: [0.005, 0.015]
+  SigmaShare: [0.0025, 0.005, 0.025]
   
 
  DEPENDENCIAS:
