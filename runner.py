@@ -19,8 +19,8 @@ parser.add_argument('-s', '--experiment_settings', default='runner_settings.yaml
 parser.add_argument('-e', '--eliga_settings', default=None, help='Settings file for ELIGA.')
 parser.add_argument('-p', '--experiment_path', default='out/', help='Path to output results. By default it is "out/".')
 parser.add_argument('-r', '--repetitions', default=10, help='Number of times that the same parameters must be evaluated.')
-parser.add_argument('-c', '--resume', default='False', type=(lambda x: x.lower() in ("yes", "true", "t", "1")), help='Boolean flag indicating if experiment should be restored from checkpoint.')
-parser.add_argument('-n', '--notification', action='store_true', help='Telegram notification.')
+parser.add_argument('-c', '--resume', action='store_true', help='Boolean flag indicating if experiment should be restored from checkpoint.')
+parser.add_argument('-n', '--notification', action='store_true', help='Activate Telegram notification.')
 
 args = vars(parser.parse_args())
 #=====================================================

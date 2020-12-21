@@ -458,10 +458,8 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
                  size_t n_trn = class_n_elem - n_val;
                  arma::uvec aux1 = classIdx.subvec(0,n_trn-1);
                  arma::uvec aux2 = classIdx.subvec(n_trn,class_n_elem-1);
-                 
                  trnIdx.insert_rows(trnIdx.n_elem, aux1);
                  tstIdx.insert_rows(tstIdx.n_elem, aux2);
-                 
                  aux1.clear();
                  aux2.clear();
              }    
@@ -473,9 +471,7 @@ vector <double> fitness(cromosoma crom, int lbits, int rank, float seed, short p
              {   
                  
                  arma::Row<size_t> output;
-                 
                  output = TrainTestClassifier(TRNdataTMP.cols(trnIdx),  TRNdataTMP.cols(tstIdx), trnLabelsTMP.cols(trnIdx), clasificadores[i], clasif_configs[i], optimizador, optim_configs, false);
-                 
                  cUAR = fUAR(trnLabelsTMP.cols(tstIdx), output);
                  fit_aux = fit_aux + cUAR;                 
                  cUAR = 0.0;
