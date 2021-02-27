@@ -206,7 +206,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     print('\n < '+dataset+' >')
 
     testbin  = 'bin/test'
-    confpath = 'settings/settingsDT'
+    confpath = 'settings/settingsDT/'
     prevpath=os.getcwd()
     results = {}
     
@@ -560,108 +560,108 @@ tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)         
 sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)                                #   smartphone-activity  |           |    
                                                                                               #   isolet               |    37     |    44
                                                                                               #   mfeat                |    17     |    14
-dtset = 'gcm'                                                                                 #   leukemia             |    30     |    30
-file1 = path+'/data/GCM_Training.arff'                                                        #   all-leukemia         |   145     |   168
-file2 = path+'/data/GCM_Test.arff'                                                            #   yeoh                 |   298     |   270
-nfeats = 264                                                                                  #   gcm                  |   241     |   264
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)                       #   tcga-pancan          |           |
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'gcm'                                                                                 #   leukemia             |    30     |    30
+#file1 = path+'/data/GCM_Training.arff'                                                        #   all-leukemia         |   145     |   168
+#file2 = path+'/data/GCM_Test.arff'                                                            #   yeoh                 |   298     |   270
+#nfeats = 264                                                                                  #   gcm                  |   241     |   264
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)                       #   tcga-pancan          |           |
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'madelon'
-file1 = path+'/data/madelon.trn.arff'
-file2 = path+'/data/madelon.tst.arff'
-nfeats = 22
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'madelon'
+#file1 = path+'/data/madelon.trn.arff'
+#file2 = path+'/data/madelon.tst.arff'
+#nfeats = 22
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'gisette'
-file1 = path+'/data/Gisette/gisette_train.arff'
-file2 = path+'/data/Gisette/gisette_test.arff'
-nfeats = 0
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'gisette'
+#file1 = path+'/data/Gisette/gisette_train.arff'
+#file2 = path+'/data/Gisette/gisette_test.arff'
+#nfeats = 0
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset ='all-leukemia' 
-file1 = path+'/data/additional/ALL-Leukemia_trn.arff'
-file2 = path+'/data/additional/ALL-Leukemia_tst.arff'
-nfeats = 168
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset ='all-leukemia' 
+#file1 = path+'/data/additional/ALL-Leukemia_trn.arff'
+#file2 = path+'/data/additional/ALL-Leukemia_tst.arff'
+#nfeats = 168
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'arrhythmia'
-file1 = path+'/data/additional/arrhythmia_trn.arff'
-file2 = path+'/data/additional/arrhythmia_tst.arff'
-nfeats = 11
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'arrhythmia'
+#file1 = path+'/data/additional/arrhythmia_trn.arff'
+#file2 = path+'/data/additional/arrhythmia_tst.arff'
+#nfeats = 11
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'dermatology'
-file1 = path+'/data/additional/dermatology-5dobscv_trn.arff'
-file2 = path+'/data/additional/dermatology-5dobscv_tst.arff'
-nfeats = 6
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'dermatology'
+#file1 = path+'/data/additional/dermatology-5dobscv_trn.arff'
+#file2 = path+'/data/additional/dermatology-5dobscv_tst.arff'
+#nfeats = 6
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'isolet'
-file1 = path+'/data/additional/isolet_trn.arff'
-file2 = path+'/data/additional/isolet_tst.arff'
-nfeats = 44
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'isolet'
+#file1 = path+'/data/additional/isolet_trn.arff'
+#file2 = path+'/data/additional/isolet_tst.arff'
+#nfeats = 44
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'mfeat'
-file1 = path+'/data/additional/mfeat_trn.arff'
-file2 = path+'/data/additional/mfeat_tst.arff'
-nfeats = 14
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'mfeat'
+#file1 = path+'/data/additional/mfeat_trn.arff'
+#file2 = path+'/data/additional/mfeat_tst.arff'
+#nfeats = 14
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'movement'
-file1 = path+'/data/additional/movement_libras-5dobscv_trn.arff'
-file2 = path+'/data/additional/movement_libras-5dobscv_tst.arff'
-nfeats = 9
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'movement'
+#file1 = path+'/data/additional/movement_libras-5dobscv_trn.arff'
+#file2 = path+'/data/additional/movement_libras-5dobscv_tst.arff'
+#nfeats = 9
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'optdigits'
-file1 = path+'/data/additional/optdigits-5dobscv_trn.arff'
-file2 = path+'/data/additional/optdigits-5dobscv_tst.arff'
-nfeats = 0
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'optdigits'
+#file1 = path+'/data/additional/optdigits-5dobscv_trn.arff'
+#file2 = path+'/data/additional/optdigits-5dobscv_tst.arff'
+#nfeats = 0
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'smartphone-activity'
-file1 = path+'/data/additional/smartphone_activity_trn.arff'
-file2 = path+'/data/additional/smartphone_activity_tst.arff'
-nfeats = 0
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'smartphone-activity'
+#file1 = path+'/data/additional/smartphone_activity_trn.arff'
+#file2 = path+'/data/additional/smartphone_activity_tst.arff'
+#nfeats = 0
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'tcga-pancan'
-file1 = path+'/data/additional/tcga-pancan_trn.arff'
-file2 = path+'/data/additional/tcga-pancan_tst.arff'
-nfeats = 0
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'tcga-pancan'
+#file1 = path+'/data/additional/tcga-pancan_trn.arff'
+#file2 = path+'/data/additional/tcga-pancan_tst.arff'
+#nfeats = 0
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
-dtset = 'yeoh'
-file1 = path+'/data/additional/yeoh-trn.arff'
-file2 = path+'/data/additional/yeoh-tst.arff'
-nfeats = 270
-tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+#dtset = 'yeoh'
+#file1 = path+'/data/additional/yeoh-trn.arff'
+#file2 = path+'/data/additional/yeoh-tst.arff'
+#nfeats = 270
+#tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+#sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
 writer.save()
