@@ -371,7 +371,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     start_time = time.time()
     #fs = TuRF(core_algorithm="ReliefF", n_features_to_select=nf, pct=0.5)
     fs = TuRF(core_algorithm="ReliefF", n_features_to_select=nf)
-    fs.fit(trnData, trnLabels, fit_params={'turf__headers': header})
+    fs.fit(trnData, trnLabels) #, fit_params={'turf__headers': header})
     elapsed_time = time.time() - start_time
     etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     
