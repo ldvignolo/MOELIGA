@@ -12,6 +12,8 @@ from skrebate import ReliefF, SURF, SURFstar, MultiSURF, MultiSURFstar, TuRF
 from ReliefF import ReliefF as ReliefF2
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.feature_selection import SequentialFeatureSelector, f_classif
 import os
 
 from sklearn.preprocessing import LabelEncoder
@@ -196,10 +198,13 @@ def batchRelief(file1, file2, nf, encodeLabels=True, nb=20):
 
 def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='None'):
     
+    if nf==0:
+        return
+    
     print('\n < '+dataset+' >')
 
     testbin  = 'bin/test'
-    confpath = 'settings/'
+    confpath = 'settings/settingsDT'
     prevpath=os.getcwd()
     results = {}
     
@@ -360,32 +365,33 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     
     # # #
     
-    #fsmethod = 'sk_TuRF'
-    #start_time = time.time()
+    fsmethod = 'sk_TuRF'
+    start_time = time.time()
     #fs = TuRF(core_algorithm="ReliefF", n_features_to_select=nf, pct=0.5)
-    #fs.fit(trnData, trnLabels, fit_params={'turf__headers': header})
-    #elapsed_time = time.time() - start_time
-    #etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+    fs = TuRF(core_algorithm="ReliefF", n_features_to_select=nf)
+    fs.fit(trnData, trnLabels, fit_params={'turf__headers': header})
+    elapsed_time = time.time() - start_time
+    etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     
-    #fv = fs.top_features_[:nf]
-    #fv.sort()
-    #fv = [x+1 for x in fv] # 0 based
-    ## featsfile = mpath + '_resultados/' + dataset+'_features_' + fsmethod + '.txt'
-    #featsfile = prevpath + '/_resultados/' + dataset+'_features_' + fsmethod + '.txt'
-    #f=open(featsfile,'w')
-    #for ele in fv:
-        #f.write(str(ele)+' ')
-    #f.write('\n')    
-    #f.close()
+    fv = fs.top_features_[:nf]
+    fv.sort()
+    fv = [x+1 for x in fv] # 0 based
+    # featsfile = mpath + '_resultados/' + dataset+'_features_' + fsmethod + '.txt'
+    featsfile = prevpath + '/_resultados/' + dataset+'_features_' + fsmethod + '.txt'
+    f=open(featsfile,'w')
+    for ele in fv:
+        f.write(str(ele)+' ')
+    f.write('\n')    
+    f.close()
 
-    ##jsonfile = mpath + '_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
-    #jsonfile = prevpath + '/_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
-    #cmd = testbin + ' file ' + featsfile + ' cfg ' + confpath + dataset + '_SETTINGS.cfg' + ' > ' + jsonfile
-    #os.chdir(mpath)
-    #os.system(cmd)
-    #os.chdir(prevpath)
-    #tmpdict = loadJSON(jsonfile,etime,nf,nb)
-    #results.update({fsmethod:tmpdict})
+    #jsonfile = mpath + '_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    jsonfile = prevpath + '/_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    cmd = testbin + ' file ' + featsfile + ' cfg ' + confpath + dataset + '_SETTINGS.cfg' + ' > ' + jsonfile
+    os.chdir(mpath)
+    os.system(cmd)
+    os.chdir(prevpath)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
+    results.update({fsmethod:tmpdict})
     
     # # #
 
@@ -415,6 +421,94 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     os.chdir(prevpath)
     tmpdict = loadJSON(jsonfile,etime,nf,nb)
     results.update({fsmethod:tmpdict})
+    
+    # # #
+    
+    fsmethod = 'MutualInfo'
+    start_time = time.time()
+    mi_features = mutual_info_classif(trnData, trnLabels, random_state=42)
+    fv = np.argsort(mi_features)[-1:0:-1][:number_of_features]
+    elapsed_time = time.time() - start_time
+    etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+    
+    fv = fv[:nf]
+    fv.sort()
+    fv = [x+1 for x in fv] # 0 based
+    #featsfile = mpath + '_resultados/' + dataset+'_features_'+ fsmethod +'.txt'
+    featsfile = prevpath + '/_resultados/' + dataset+'_features_'+ fsmethod +'.txt'
+    f=open(featsfile,'w')
+    for ele in fv:
+        f.write(str(ele)+' ')
+    f.write('\n')    
+    f.close()
+
+    #jsonfile = mpath + '_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    jsonfile = prevpath + '/_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    cmd = testbin + ' file ' + featsfile + ' cfg ' + confpath + dataset + '_SETTINGS.cfg' + ' > ' + jsonfile
+    os.chdir(mpath)
+    os.system(cmd)
+    os.chdir(prevpath)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
+    results.update({fsmethod:tmpdict})
+    
+    # # # 
+    
+    fsmethod = 'SFS-DT'
+    start_time = time.time()
+    dtree = DecisionTreeClassifier(random_state=0, max_depth=2)
+    sfs = SequentialFeatureSelector(dtree, n_features_to_select=nf)
+    sfs.fit(X, y)
+    elapsed_time = time.time() - start_time
+    etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+    
+    fv = sfs.get_support(indices=True)
+    fv.sort()
+    fv = [x+1 for x in fv] # 0 based
+    #featsfile = mpath + '_resultados/' + dataset+'_features_'+ fsmethod +'.txt'
+    featsfile = prevpath + '/_resultados/' + dataset+'_features_'+ fsmethod +'.txt'
+    f=open(featsfile,'w')
+    for ele in fv:
+        f.write(str(ele)+' ')
+    f.write('\n')    
+    f.close()
+
+    #jsonfile = mpath + '_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    jsonfile = prevpath + '/_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    cmd = testbin + ' file ' + featsfile + ' cfg ' + confpath + dataset + '_SETTINGS.cfg' + ' > ' + jsonfile
+    os.chdir(mpath)
+    os.system(cmd)
+    os.chdir(prevpath)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
+    results.update({fsmethod:tmpdict})
+    
+    # # # 
+    # Univariate feature selection with F-test for feature scoring
+    fsmethod = 'SFS-Ftest'
+    start_time = time.time()
+    sfs = SequentialFeatureSelector(f_classif, n_features_to_select=nf)
+    sfs.fit(X, y)
+    elapsed_time = time.time() - start_time
+    etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+    
+    fv = sfs.get_support(indices=True)
+    fv.sort()
+    fv = [x+1 for x in fv] # 0 based
+    #featsfile = mpath + '_resultados/' + dataset+'_features_'+ fsmethod +'.txt'
+    featsfile = prevpath + '/_resultados/' + dataset+'_features_'+ fsmethod +'.txt'
+    f=open(featsfile,'w')
+    for ele in fv:
+        f.write(str(ele)+' ')
+    f.write('\n')    
+    f.close()
+
+    #jsonfile = mpath + '_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    jsonfile = prevpath + '/_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    cmd = testbin + ' file ' + featsfile + ' cfg ' + confpath + dataset + '_SETTINGS.cfg' + ' > ' + jsonfile
+    os.chdir(mpath)
+    os.system(cmd)
+    os.chdir(prevpath)
+    tmpdict = loadJSON(jsonfile,etime,nf,nb)
+    results.update({fsmethod:tmpdict})    
     
     return results
 
@@ -449,42 +543,119 @@ writer = pd.ExcelWriter('reporte_nb'+str(_nb)+'.xls', engine='xlsxwriter')
 workbook  = writer.book
 
 # path='other_methods/python/'
-path='../../'
-
-
-dtset = 'leukemia'
-file1 = path+'/data/leukemia_train_38x7129.arff'
-file2 = path+'/data/leukemia_test_34x7129.arff'
-#batchRelief(file1, file2, 131, nb=_nb)
-tmpres = batchRelief2(file1, 131, nb=_nb, mpath=path, dataset=dtset)
-sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
-
-
-dtset = 'gcm'
-file1 = path+'/data/GCM_Training.arff'
-file2 = path+'/data/GCM_Test.arff'
-#batchRelief(file1, file2, 587, nb=_nb)
-tmpres = batchRelief2(file1, 587, nb=_nb, mpath=path, dataset=dtset)
+path='../../'                                                                                 #               MOELIGA - NFEATS
+                                                                                              #
+                                                                                              #                        |  2nd opt  | 1rst opt
+dtset = 'leukemia'                                                                            #   dermatology          |     5     |     6
+file1 = path+'/data/leukemia_train_38x7129.arff'                                              #   optdigits            |           |     
+file2 = path+'/data/leukemia_test_34x7129.arff'                                               #   movement             |     8     |     9
+nfeats = 30                                                                                   #   arrhythmia           |    12     |    11
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)                       #   madelon              |    24     |    22
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)                                #   smartphone-activity  |           |    
+                                                                                              #   isolet               |    37     |    44
+                                                                                              #   mfeat                |    17     |    14
+dtset = 'gcm'                                                                                 #   leukemia             |    30     |    30
+file1 = path+'/data/GCM_Training.arff'                                                        #   all-leukemia         |   145     |   168
+file2 = path+'/data/GCM_Test.arff'                                                            #   yeoh                 |   298     |   270
+nfeats = 264                                                                                  #   gcm                  |   241     |   264
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)                       #   tcga-pancan          |           |
 sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
 dtset = 'madelon'
 file1 = path+'/data/madelon.trn.arff'
 file2 = path+'/data/madelon.tst.arff'
-#batchRelief(file1, file2, 61, nb=_nb)
-tmpres = batchRelief2(file1, 61, nb=_nb, mpath=path, dataset=dtset)
+nfeats = 22
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
 sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
 
 dtset = 'gisette'
 file1 = path+'/data/Gisette/gisette_train.arff'
 file2 = path+'/data/Gisette/gisette_test.arff'
-#batchRelief(file1, file2, 50, nb=_nb)
-tmpres = batchRelief2(file1, 50, nb=_nb, mpath=path, dataset=dtset)
+nfeats = 
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
 sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
+
+dtset ='all-leukemia' 
+file1 = path+'/data/additional/ALL-Leukemia_trn.arff'
+file2 = path+'/data/additional/ALL-Leukemia_tst.arff'
+nfeats = 168
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
+dtset = 'arrhythmia'
+file1 = path+'/data/additional/arrhythmia_trn.arff'
+file2 = path+'/data/additional/arrhythmia_tst.arff'
+nfeats = 11
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
+dtset = 'dermatology'
+file1 = path+'/data/additional/dermatology-5dobscv_trn.arff'
+file2 = path+'/data/additional/dermatology-5dobscv_tst.arff'
+nfeats = 6
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
+dtset = 'isolet'
+file1 = path+'/data/additional/isolet_trn.arff'
+file2 = path+'/data/additional/isolet_tst.arff'
+nfeats = 44
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
+dtset = 'mfeat'
+file1 = path+'/data/additional/mfeat_trn.arff'
+file2 = path+'/data/additional/mfeat_tst.arff'
+nfeats = 14
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
+dtset = 'movement'
+file1 = path+'/data/additional/movement_libras-5dobscv_trn.arff'
+file2 = path+'/data/additional/movement_libras-5dobscv_tst.arff'
+nfeats = 9
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
+dtset = 'optdigits'
+file1 = path+'/data/additional/optdigits-5dobscv_trn.arff'
+file2 = path+'/data/additional/optdigits-5dobscv_tst.arff'
+nfeats = 0
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
+dtset = 'smartphone-activity'
+file1 = path+'/data/additional/smartphone_activity_trn.arff'
+file2 = path+'/data/additional/smartphone_activity_tst.arff'
+nfeats = 0
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
+dtset = 'tcga-pancan'
+file1 = path+'/data/additional/tcga-pancan_trn.arff'
+file2 = path+'/data/additional/tcga-pancan_tst.arff'
+nfeats = 0
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
+dtset = 'yeoh'
+file1 = path+'/data/additional/yeoh-trn.arff'
+file2 = path+'/data/additional/yeoh-tst.arff'
+nfeats = 270
+tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
+sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
+
+
 writer.save()
-
-
-
-
