@@ -13,7 +13,9 @@ from ReliefF import ReliefF as ReliefF2
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.feature_selection import mutual_info_classif
-from sklearn.feature_selection import SequentialFeatureSelector, f_classif
+#from sklearn.feature_selection import SequentialFeatureSelector, f_classif
+from sklearn.feature_selection import SelectKBest, f_classif
+
 import os
 
 from sklearn.preprocessing import LabelEncoder
@@ -453,10 +455,12 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     
     # # # 
     
-    fsmethod = 'SFS-DT'
+    fsmethod = 'KBest-DT'
+    #fsmethod = 'SFS-DT'
     start_time = time.time()
-    dtree = DecisionTreeClassifier(random_state=0, max_depth=2)
-    sfs = SequentialFeatureSelector(dtree, n_features_to_select=nf)
+    dtree = DecisionTreeClassifier(random_state=0, max_depth=2)    
+    sfs = SelectKBest(dtree, n_features_to_select=nf)
+    #sfs = SequentialFeatureSelector(dtree, n_features_to_select=nf)
     sfs.fit(X, y)
     elapsed_time = time.time() - start_time
     etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
@@ -483,9 +487,11 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     
     # # # 
     # Univariate feature selection with F-test for feature scoring
-    fsmethod = 'SFS-Ftest'
+    fsmethod = 'KBest-Ftest'
+    #fsmethod = 'SFS-Ftest'
     start_time = time.time()
-    sfs = SequentialFeatureSelector(f_classif, n_features_to_select=nf)
+    sfs = SelectKBest(f_classif, n_features_to_select=nf)
+    #sfs = SequentialFeatureSelector(f_classif, n_features_to_select=nf)
     sfs.fit(X, y)
     elapsed_time = time.time() - start_time
     etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
