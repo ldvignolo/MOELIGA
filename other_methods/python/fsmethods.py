@@ -573,7 +573,7 @@ sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 dtset = 'gisette'
 file1 = path+'/data/Gisette/gisette_train.arff'
 file2 = path+'/data/Gisette/gisette_test.arff'
-nfeats = 
+nfeats = 0
 tmpres = batchRelief2(file1, nfeats, nb=_nb, mpath=path, dataset=dtset)
 sheets, writer = addsheet(dtset,tmpres,sheets,writer,workbook)
 
