@@ -367,33 +367,33 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     
     # # #
     
-    fsmethod = 'sk_TuRF'
-    start_time = time.time()
-    #fs = TuRF(core_algorithm="ReliefF", n_features_to_select=nf, pct=0.5)
-    fs = TuRF(core_algorithm="ReliefF", n_features_to_select=nf)
-    fs.fit(trnData, trnLabels, fit_params={'headers': header})
-    elapsed_time = time.time() - start_time
-    etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+    #fsmethod = 'sk_TuRF'
+    #start_time = time.time()
+    ##fs = TuRF(core_algorithm="ReliefF", n_features_to_select=nf, pct=0.5)
+    #fs = TuRF(core_algorithm="ReliefF", n_features_to_select=nf)
+    #fs.fit(trnData, trnLabels, fit_params={'headers': header})
+    #elapsed_time = time.time() - start_time
+    #etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     
-    fv = fs.top_features_[:nf]
-    fv.sort()
-    fv = [x+1 for x in fv] # 0 based
-    # featsfile = mpath + '_resultados/' + dataset+'_features_' + fsmethod + '.txt'
-    featsfile = prevpath + '/_resultados/' + dataset+'_features_' + fsmethod + '.txt'
-    f=open(featsfile,'w')
-    for ele in fv:
-        f.write(str(ele)+' ')
-    f.write('\n')    
-    f.close()
+    #fv = fs.top_features_[:nf]
+    #fv.sort()
+    #fv = [x+1 for x in fv] # 0 based
+    ## featsfile = mpath + '_resultados/' + dataset+'_features_' + fsmethod + '.txt'
+    #featsfile = prevpath + '/_resultados/' + dataset+'_features_' + fsmethod + '.txt'
+    #f=open(featsfile,'w')
+    #for ele in fv:
+        #f.write(str(ele)+' ')
+    #f.write('\n')    
+    #f.close()
 
-    #jsonfile = mpath + '_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
-    jsonfile = prevpath + '/_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
-    cmd = testbin + ' file ' + featsfile + ' cfg ' + confpath + dataset + '_SETTINGS.cfg' + ' > ' + jsonfile
-    os.chdir(mpath)
-    os.system(cmd)
-    os.chdir(prevpath)
-    tmpdict = loadJSON(jsonfile,etime,nf,nb)
-    results.update({fsmethod:tmpdict})
+    ##jsonfile = mpath + '_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    #jsonfile = prevpath + '/_resultados/' + dataset + '_' + fsmethod + '_mlpack.test'
+    #cmd = testbin + ' file ' + featsfile + ' cfg ' + confpath + dataset + '_SETTINGS.cfg' + ' > ' + jsonfile
+    #os.chdir(mpath)
+    #os.system(cmd)
+    #os.chdir(prevpath)
+    #tmpdict = loadJSON(jsonfile,etime,nf,nb)
+    #results.update({fsmethod:tmpdict})
     
     # # #
 
