@@ -15,6 +15,8 @@ from sklearn.model_selection import cross_val_score
 from sklearn.feature_selection import mutual_info_classif
 #from sklearn.feature_selection import SequentialFeatureSelector, f_classif
 from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.feature_selection import RFE
+
 
 import os
 
@@ -214,7 +216,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
         os.makedirs(prevpath + '/_resultados/')
   
     trnData, trnLabels, header = loadDataset(file1, encodeLabels)
-    trnData = estandarizar(trnData)    
+    trnData = estandarizar(trnData)
 
     num_examples = len(trnLabels)
     num_features = trnData.shape[0]
@@ -429,7 +431,7 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     fsmethod = 'MutualInfo'
     start_time = time.time()
     mi_features = mutual_info_classif(trnData, trnLabels, random_state=42)
-    fv = np.argsort(mi_features)[-1:0:-1][:number_of_features]
+    fv = np.argsort(mi_features)[-1:0:-1]
     elapsed_time = time.time() - start_time
     etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     
@@ -455,13 +457,12 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     
     # # # 
     
-    fsmethod = 'KBest-DT'
+    fsmethod = 'RFE-DT'
     #fsmethod = 'SFS-DT'
     start_time = time.time()
-    dtree = DecisionTreeClassifier(random_state=0, max_depth=2)    
-    sfs = SelectKBest(dtree, n_features_to_select=nf)
-    #sfs = SequentialFeatureSelector(dtree, n_features_to_select=nf)
-    sfs.fit(X, y)
+    dtree = DecisionTreeClassifier(random_state=0, max_depth=2)        
+    sfs = RFE(dtree, n_features_to_select=nf, step=1)
+    sfs.fit(trnData, trnLabels)
     elapsed_time = time.time() - start_time
     etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     
@@ -490,9 +491,9 @@ def batchRelief2(file1, nf, encodeLabels=True, nb=20, mpath='None', dataset='Non
     fsmethod = 'KBest-Ftest'
     #fsmethod = 'SFS-Ftest'
     start_time = time.time()
-    sfs = SelectKBest(f_classif, n_features_to_select=nf)
+    sfs = SelectKBest(f_classif, k=nf)
     #sfs = SequentialFeatureSelector(f_classif, n_features_to_select=nf)
-    sfs.fit(X, y)
+    sfs.fit(trnData, trnLabels)
     elapsed_time = time.time() - start_time
     etime = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     
