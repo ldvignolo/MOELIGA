@@ -1,6 +1,7 @@
-# pip3 install skrebate    
-# pip3 install ReliefF
-# pip3 install arff
+# pip install skrebate    
+# pip install ReliefF
+# pip install arff
+# pip install mlxtend
 
 import os
 import json
