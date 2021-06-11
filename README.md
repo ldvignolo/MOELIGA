@@ -20,9 +20,9 @@ Ejecución
 
 ---
 
-Compilar MPICH en un path sin espacios (**No hace falta compilar como root, pero si se hace**)
+Compilar MPICH en un path sin espacios (**No hace falta compilar como root, pero si para instalar**)
 
-- `>> ./configure`
+- `>> ./configure --with-pm=mpd"`
 - `>> make`
 - `>> make install` (ejecutar como *root*)
 
