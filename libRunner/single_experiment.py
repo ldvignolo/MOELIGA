@@ -1062,6 +1062,7 @@ class SINGLE_EXPERIMENT(object):
                 t = self.general['ELAPSED_TIME'][:]
                 t.insert(0,0)
                 SUMMARY['TRAIN'][key] = np.diff(t).tolist()
+                # SUMMARY['TRAIN'][key] = np.diff(t).sum().tolist()
             
             
             elif ('MEDIDA_PARA_ELEGIR_EL_MEJOR_R' in key):

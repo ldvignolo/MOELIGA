@@ -13,9 +13,9 @@
    #SQUEEZE_CRITERIUM: max  # CRITERIO PARA COMBINAR INFORMACION DE TODAS LAS GENERACIONES (x EXPERIMENTO)
    #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
   
-  #ELAPSED_TIME:
-   #SQUEEZE_CRITERIUM: sum  # CRITERIO PARA COMBINAR INFORMACION DE TODAS LAS GENERACIONES (x EXPERIMENTO)
-   #STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
+  ELAPSED_TIME:
+   SQUEEZE_CRITERIUM: sum  # CRITERIO PARA COMBINAR INFORMACION DE TODAS LAS GENERACIONES (x EXPERIMENTO)
+   STATISTICS: ['mean', 'median', 'max', 'min', 'std', 'mad', 'confidence']
 
 #-----------------------------------------
 
