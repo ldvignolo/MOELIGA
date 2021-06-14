@@ -174,7 +174,8 @@ def construir_reporte(root_path, runner_settings):
 
     df = pd.read_csv(os.path.join(root_path, 'final_report.csv'),
                     delimiter=',',
-                    header=[i for i in range(len(parameters)+1)],
+                    # header=[i for i in range(len(parameters)+1)],
+                    header=[i for i in range(len(parameters))],
                     index_col=0)
 
     #df.to_excel(os.path.join(root_path, 'final_report.xlsx'))
