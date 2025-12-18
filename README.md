@@ -1,56 +1,47 @@
-# README #
+# README
 
-## Version Multi-Objetivo de ELIGA - MOELIGA ##
+## Multi-Objective Version of ELIGA - MOELIGA
 
 - TODO
--- Pasar el parametro k del metodo de torneo desde el archivo de configuracion (esta hardcodeado)
+- Pass the k parameter of the tournament method from the configuration file (currently hardcoded)
 
+To compile:
 
-Para compilar
-- Recordar que MOELIGA debe compilarse con el mismo compilador que MPICH (y mpd)
+- Remember that MOELIGA must be compiled with the same compiler as MPICH (and mpd)[^1]
 
+Execution:
 
-Ejecución
 - `>> mpdboot`
 - `>> ./agp cfg archivo_SETTINGS.cfg`
-- o para que persista al cerrar la sesion:  - `>> ./agp </dev/null &`
+- Or to persist after closing the session: `>> ./agp </dev/null &`[^1]
 
+***
 
+Compile MPICH in a path without spaces (**No need to compile as root, but yes for install**)
 
-
----
-
-Compilar MPICH en un path sin espacios (**No hace falta compilar como root, pero si para instalar**)
-
-- `>> ./configure --with-pm=mpd"`
+- `>> ./configure --with-pm=mpd`
 - `>> make`
-- `>> make install` (ejecutar como *root*)
+- `>> make install` (run as *root*)[^1]
 
-**NOTA** Si falla `sort`, es necesario instalar coreutils (FC25)
+**NOTE** If `sort` fails, install coreutils (FC25)
 
-
-Luego ejecutar:
+Then run:
 
 - `>> cd src/pm/mpd`
 - `>> ./configure`
 - `>> make`
-- `>> make install` (ejecutar como *root*)
+- `>> make install` (run as *root*)[^1]
 
-Crear archivo:
+Create file:
 
->> vim /home/mgerard/.mpd.conf (poner secretword=<...>)
+`>> vim /home/<user_name>/.mpd.conf` (set secretword=<...>)
 
->> chmod 600 /home/mgerard/.mpd.conf
+`>> chmod 600 /home/<user_name>/.mpd.conf`
 
+Then, to test (from anywhere):
 
+- `>> mpdboot` (should have no output if working correctly)
+- To check if the daemon starts: `>> mpdtrace` (should show hostname if working)
+- `>> mpdallexit` (kills the process)[^1]
 
-
-Luego, para probar (en cualquier lugar):
-
-`>> mpdboot` (no debería haber salida si funciona correctamente)
-
-Para saber si levanta el demonio:
-
-`>> mpdtrace` (debería dar el nombre del host si funciona correctamente)
-
-`>> mpdallexit` (mata el proceso)
+[^1]: README.md
